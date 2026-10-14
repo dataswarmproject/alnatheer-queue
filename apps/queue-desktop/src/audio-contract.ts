@@ -11,6 +11,12 @@ export const audioSettingsSchema = z
   })
   .strict();
 export type AudioSettings = z.infer<typeof audioSettingsSchema>;
+// Re-enable only in a release with an approved announcement voice library.
+export const spokenAnnouncementsEnabled = false;
+export function effectiveAudioSettings(input: unknown): AudioSettings {
+  const settings = audioSettingsSchema.parse(input);
+  return { ...settings, voiceEnabled: spokenAnnouncementsEnabled && settings.voiceEnabled };
+}
 export const defaultAudioSettings: AudioSettings = {
   enabled: true,
   voiceEnabled: false,

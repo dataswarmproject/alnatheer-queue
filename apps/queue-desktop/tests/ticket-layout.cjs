@@ -41,6 +41,15 @@ delete env.ELECTRON_RUN_AS_NODE;
           height: el.getBoundingClientRect().height,
           overflow: el.scrollWidth > el.clientWidth + 1,
         }));
+        const brandEdges = await page.locator('.brand-title').evaluate(element => {
+          const edge = selector => {
+            const range = document.createRange();
+            range.selectNodeContents(element.querySelector(selector));
+            return range.getBoundingClientRect().right;
+          };
+          return { arabic: edge('strong'), english: edge('span') };
+        });
+        expect(Math.abs(brandEdges.arabic - brandEdges.english)).toBeLessThan(1);
         const width = paper === '58mm' ? 58 : 80,
           height = Math.max(60, (size.height * 25.4) / 96 + 2);
         expect(size.overflow).toBe(false);

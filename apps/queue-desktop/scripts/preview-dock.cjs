@@ -12,7 +12,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const file = path.join(directory, 'pairing.json'),
     profile = path.join(directory, 'profile');
   await fs.mkdir(profile);
-  const env = { ...process.env };
+  const env = { ...process.env, QUEUE_LOCAL_PREVIEW: '1' };
   delete env.ELECTRON_RUN_AS_NODE;
   const host = spawn(
     process.execPath,

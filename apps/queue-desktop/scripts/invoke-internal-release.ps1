@@ -54,7 +54,8 @@ try {
   Invoke-Checked 'pnpm.cmd' @('audit','--prod','--audit-level=high')
   Invoke-Checked 'pnpm.cmd' @('build')
   Invoke-Checked 'node.exe' @('apps/queue-desktop/scripts/prepare-voice-library.cjs')
-  foreach ($suite in @('test:setup','test:devices','test:manager','test:tickets','test:audio-controls')) {
+  # test:setup includes alert controls, locked speech, and native TV window controls.
+  foreach ($suite in @('test:setup','test:devices','test:manager','test:tickets')) {
     Invoke-Checked 'pnpm.cmd' @('--filter','@saraf/queue-desktop',$suite)
   }
   Invoke-Checked 'pnpm.cmd' @('package:win')

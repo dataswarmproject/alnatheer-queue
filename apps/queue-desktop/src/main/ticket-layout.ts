@@ -40,7 +40,7 @@ export function ticketDocument(
   @page{margin:0;size:auto}*{box-sizing:border-box}html,body{margin:0;padding:0;color:#000;background:#fff;font-family:TicketSans,TicketArabic,sans-serif}
   .ticket{width:${width}mm;padding:4mm 4mm 3mm;text-align:center;break-inside:avoid;overflow-wrap:anywhere;font-size:10pt;line-height:1.4}
   .brand{display:grid;grid-template-columns:${width === 58 ? 14 : 18}mm 1fr;align-items:center;gap:2mm;margin-bottom:2mm}.brand img{width:100%;height:10mm;object-fit:contain;filter:grayscale(1) brightness(.65) contrast(20)}
-  .brand-title{text-align:start;line-height:1.3;min-width:0}.brand-title strong{display:block;font-size:${width === 58 ? 12 : 15}pt;font-weight:600}.brand-title span{display:block;font-size:7pt;letter-spacing:.035em}
+  .brand-title{text-align:right;line-height:1.3;min-width:0}.brand-title strong{display:block;font-size:${width === 58 ? 12 : 15}pt;font-weight:600}.brand-title span{display:block;text-align:right;font-size:7pt;letter-spacing:.035em}
   .company{font-size:${width === 58 ? 8 : 9}pt;line-height:1.4;margin:0 auto 2mm;max-width:62mm}
   .number-block{padding:2mm 0;border-top:.25mm solid #000;border-bottom:.25mm solid #000}.eyebrow{display:flex;align-items:center;justify-content:space-between;font-size:8pt;line-height:1.3}
   .number{display:block;direction:ltr;white-space:nowrap;font-family:TicketMono,monospace;font-size:${codeSize.toFixed(2)}mm;font-weight:600;line-height:1.05;margin:1mm 0 0;letter-spacing:-.035em}

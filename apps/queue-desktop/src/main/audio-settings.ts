@@ -3,9 +3,9 @@ import { readFile, writeFile, rename } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import {
-  audioSettingsSchema,
   audioRuntimeSchema,
   defaultAudioSettings,
+  effectiveAudioSettings,
   type AudioRuntime,
 } from '../audio-contract';
 
@@ -13,7 +13,7 @@ export async function createAudioController(windows: () => BrowserWindow[]) {
   const file = path.join(app.getPath('userData'), 'announcement-settings.json');
   let settings = { ...defaultAudioSettings };
   try {
-    settings = audioSettingsSchema.parse(JSON.parse(await readFile(file, 'utf8')));
+    settings = effectiveAudioSettings(JSON.parse(await readFile(file, 'utf8')));
   } catch {}
   let runtime: AudioRuntime | null = null;
   const broadcast = (channel: string, value?: unknown) => {
@@ -31,7 +31,7 @@ export async function createAudioController(windows: () => BrowserWindow[]) {
     test: () => broadcast('queue:audio-test'),
     save: async (input: unknown) => {
       if (saving) throw new Error('Audio settings are being saved');
-      const value = audioSettingsSchema.parse(input);
+      const value = effectiveAudioSettings(input);
       saving = true;
       try {
         const temp = `${file}.${randomUUID()}.tmp`;

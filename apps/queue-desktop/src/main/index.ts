@@ -52,6 +52,7 @@ import { createTvController } from './tv';
 import { speechRequestSchema, speechAudioSchema } from '@saraf/queue-core/speech';
 import { desktopSpeechStatus, guardFreeSpeech } from './speech-policy';
 import { createAudioController } from './audio-settings';
+import { spokenAnnouncementsEnabled } from '../audio-contract';
 import {
   operationsSettingsSchema,
   operationsStatusSchema,
@@ -70,6 +71,7 @@ protocol.registerSchemesAsPrivileged([
 if (!app.isPackaged && process.env.QUEUE_TEST_PROFILE)
   app.setPath('userData', process.env.QUEUE_TEST_PROFILE);
 const hostOnly = process.argv.includes('--queue-host-only');
+const localPreview = !app.isPackaged && process.env.QUEUE_LOCAL_PREVIEW === '1';
 if (!hostOnly && !app.requestSingleInstanceLock()) app.quit();
 let window: BrowserWindow,
   expanded = true,
@@ -196,7 +198,7 @@ async function adaptRole() {
       expanded = true;
       window.setAlwaysOnTop(false);
       window.setSkipTaskbar(false);
-      window.setMinimizable(false);
+      window.setMinimizable(localPreview);
       window.setResizable(true);
       window.setMaximizable(true);
       window.setFullScreen(true);
@@ -244,15 +246,28 @@ function createMainWindow(customer: boolean, framed: boolean) {
   win.on('maximize', sendWindowState);
   win.on('unmaximize', sendWindowState);
   win.on('close', event => {
-    if (win === window && framedWindow && !quitting) {
+    if (win === window && framedWindow && (!customerWindow || localPreview) && !quitting) {
       event.preventDefault();
       quitting = true;
       void Promise.resolve(tv?.close()).finally(() => app.quit());
       return;
     }
-    if (win === window && customerWindow && !quitting && Date.now() >= operatorUntil)
+    if (
+      win === window &&
+      customerWindow &&
+      !localPreview &&
+      !quitting &&
+      Date.now() >= operatorUntil
+    )
       event.preventDefault();
   });
+  if (localPreview && customer) {
+    win.webContents.on('before-input-event', (_event, input) => {
+      if (input.type !== 'keyDown') return;
+      if (input.key === 'Escape') win.setFullScreen(false);
+      if (input.key === 'F11') win.setFullScreen(!win.isFullScreen());
+    });
+  }
   win.on('blur', () => {
     if (win === window && !expanded && !win.isDestroyed()) win.moveTop();
   });
@@ -272,7 +287,10 @@ async function loadRenderer(win: BrowserWindow) {
     await win.loadURL(url.href);
   } else await win.loadURL('queue://app/index.html');
 }
-async function replaceWindow(customer: boolean, framed = !customer && !tellerWindow) {
+async function replaceWindow(
+  customer: boolean,
+  framed = (customer && localPreview) || (!customer && !tellerWindow),
+) {
   if (customer === customerWindow && framed === framedWindow) return;
   ++transitionVersion;
   const previous = window;
@@ -285,6 +303,8 @@ async function replaceWindow(customer: boolean, framed = !customer && !tellerWin
 }
 function handle(channel: string, work: (input: unknown) => Promise<unknown>) {
   ipcMain.handle(channel, async (event, input) => {
+    if (channel === 'queue:speech' && !spokenAnnouncementsEnabled)
+      throw new Error('النداء الصوتي غير متاح في هذا الإصدار.');
     if (tv?.isSender(event)) {
       if (channel === 'queue:connection') return tv.connection();
       if (channel === 'queue:snapshot') return tv.snapshot();
@@ -330,7 +350,7 @@ app.whenReady().then(async () => {
   await startSavedHost().catch(() => {});
   customerWindow = ['kiosk', 'display'].includes(connectionInfo().role ?? '');
   tellerWindow = connectionInfo().role === 'teller';
-  framedWindow = !customerWindow && !tellerWindow;
+  framedWindow = (customerWindow && localPreview) || (!customerWindow && !tellerWindow);
   window = createMainWindow(customerWindow, framedWindow);
   tv = createTvController(rendererRoot, loadRenderer, () => window);
   audio = await createAudioController(() => BrowserWindow.getAllWindows());

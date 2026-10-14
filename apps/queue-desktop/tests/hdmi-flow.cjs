@@ -71,8 +71,20 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.getByRole('button', { name: 'اتصال', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'إدارة شاشات العرض' })).toBeVisible();
     // Emulate monitor inventory only. Actual HDMI wiring/audio needs a hardware pilot.
-    const displayId = await app.evaluate(({ screen, app, BrowserWindow }) => {
+    const physical = process.env.QUEUE_TEST_PHYSICAL_HDMI === '1';
+    const displayId = await app.evaluate(({ screen, app, BrowserWindow }, physical) => {
       const primary = screen.getPrimaryDisplay();
+      if (physical) {
+        const external = screen.getAllDisplays().find(d => d.id !== primary.id);
+        if (!external) throw new Error('Connect a second display and select Extend in Windows.');
+        app.queueTvBounds = [];
+        const old = BrowserWindow.prototype.setBounds;
+        BrowserWindow.prototype.setBounds = function (bounds, ...rest) {
+          if (this.getTitle().includes('شاشة العرض')) app.queueTvBounds.push(bounds);
+          return old.call(this, bounds, ...rest);
+        };
+        return external.id;
+      }
       const tvId = primary.id + 10000;
       const tv = {
         ...primary,
@@ -90,7 +102,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
         return old.call(this, bounds, ...rest);
       };
       return tvId;
-    });
+    }, physical);
     await page.getByRole('button', { name: 'تحديث الشاشات', exact: true }).click();
     await page.getByLabel('شاشة العرض').selectOption(String(displayId));
     const appeared = app.waitForEvent('window');
@@ -98,82 +110,73 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const tvPage = await appeared;
     tvPage.on('pageerror', error => errors.push(error.message));
     await expect(tvPage.locator('.tv-ticket')).toHaveText('—');
-    const availableArabic = await tvPage.evaluate(
-      () =>
-        speechSynthesis.getVoices().filter(v => v.localService && /^ar(?:-|$)/i.test(v.lang))
-          .length,
+    await app.evaluate(({ app, BrowserWindow }, muted) => {
+      for (const window of BrowserWindow.getAllWindows()) window.webContents.setAudioMuted(muted);
+      app.on('browser-window-created', (_event, window) => window.webContents.setAudioMuted(muted));
+    }, !physical);
+    await tvPage.evaluate(() => {
+      window.queueSpoken = [];
+      window.queueAlerts = 0;
+      speechSynthesis.speak = utterance => window.queueSpoken.push(utterance.text);
+      const play = HTMLAudioElement.prototype.play;
+      HTMLAudioElement.prototype.play = function () {
+        if (this.src.includes('queue-alert-sound.mp3')) window.queueAlerts++;
+        return play.call(this);
+      };
+    });
+    await expect(
+      page.getByText('النداء الصوتي غير متاح في هذا الإصدار.', { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel('أسلوب النداء')).toHaveCount(0);
+    expect((await page.evaluate(() => window.queue.audioStatus())).settings.voiceEnabled).toBe(
+      false,
     );
-    console.log(`Installed local Arabic voices exposed to the native TV: ${availableArabic}.`);
-    // Test the Windows fallback explicitly; the installed free library otherwise becomes default.
-    if (process.env.QUEUE_TEST_LOCAL_SPEECH)
-      await expect
-        .poll(async () => (await page.evaluate(() => window.queue.audioStatus())).runtime?.mode)
-        .toBe('natural');
-    await page.getByLabel('أسلوب النداء').selectOption('local');
-    // Mock the speech engine only; actual calls below still traverse the branch database.
-    await tvPage.evaluate(() => {
-      window.queueSpoken = [];
-      window.queueVoices = [
-        { voiceURI: 'test-english', name: 'TEST ENGLISH', lang: 'en-US', localService: true },
-        { voiceURI: 'test-remote', name: 'TEST REMOTE', lang: 'ar-SA', localService: false },
-      ];
-      speechSynthesis.getVoices = () => window.queueVoices;
-      window.SpeechSynthesisUtterance = class {
-        constructor(text) {
-          this.text = text;
-        }
-      };
-      speechSynthesis.speak = utterance => {
-        window.queueSpoken.push({
-          text: utterance.text,
-          lang: utterance.lang,
-          voiceURI: utterance.voice.voiceURI,
-        });
-        setTimeout(() => utterance.onend?.({}), 0);
-      };
-      speechSynthesis.cancel = () => {};
-      speechSynthesis.dispatchEvent(new Event('voiceschanged'));
-    });
-    await expect(page.getByRole('button', { name: 'اختبار النداء', exact: true })).toBeDisabled();
-    await expect(page.getByText('لا يوجد صوت عربي محلي متاح.', { exact: false })).toBeVisible();
-    await tvPage.evaluate(() => {
-      window.queueVoices.push(
-        { voiceURI: 'test-egypt', name: 'TEST EGYPT', lang: 'ar-EG', localService: true },
-        { voiceURI: 'test-saudi', name: 'TEST SAUDI', lang: 'ar-SA', localService: true },
-      );
-      speechSynthesis.dispatchEvent(new Event('voiceschanged'));
-    });
-    await expect(page.getByLabel('الصوت العربي')).toHaveValue('test-saudi');
-    await expect(page.getByLabel('الصوت العربي').locator('option')).toHaveCount(2);
-    await page.getByLabel('الصوت العربي').selectOption('test-egypt');
-    await expect
-      .poll(async () => (await page.evaluate(() => window.queue.audioStatus())).runtime?.voiceURI)
-      .toBe('test-egypt');
-    await page.getByLabel('الصوت العربي').selectOption('test-saudi');
-    await expect
-      .poll(async () => (await page.evaluate(() => window.queue.audioStatus())).runtime?.voiceURI)
-      .toBe('test-saudi');
-    await page.getByRole('button', { name: 'اختبار النداء', exact: true }).click();
-    await expect
-      .poll(() => tvPage.evaluate(() => window.queueSpoken.length), { timeout: 10000 })
-      .toBe(1);
-    expect((await tvPage.evaluate(() => window.queueSpoken))[0]).toEqual({
-      text: 'هذا اختبار للصوت. على صاحب التذكرة رقم A... ثلاثة وعشرين، التوجّه إلى الكاونتر رقم ثلاثة.',
-      lang: 'ar-SA',
-      voiceURI: 'test-saudi',
-    });
-    await tvPage.evaluate(() => {
-      window.queueSpoken = [];
-    });
-    // Calls are enabled by default; controls live only in the manager window.
+    await expect(tvPage.evaluate(() => window.queue.speech({ test: true }))).rejects.toThrow(
+      'غير متاح',
+    );
+    expect(
+      await page.evaluate(async () => {
+        const { settings } = await window.queue.audioStatus();
+        return (await window.queue.saveAudioSettings({ ...settings, voiceEnabled: true }))
+          .voiceEnabled;
+      }),
+    ).toBe(false);
+    await page.getByRole('button', { name: 'اختبار التنبيه', exact: true }).click();
+    await expect.poll(() => tvPage.evaluate(() => window.queueAlerts)).toBe(1);
+    expect(await tvPage.evaluate(() => window.queueSpoken.length)).toBe(0);
     await expect(tvPage.locator('button,select,input,footer')).toHaveCount(0);
-    await page.getByLabel('مستوى صوت النداء', { exact: false }).press('ArrowLeft');
+    await page.getByLabel('مستوى صوت التنبيه', { exact: false }).press('ArrowLeft');
     await expect
       .poll(async () => (await page.evaluate(() => window.queue.audioStatus())).settings.volume)
       .toBe(0.95);
-    await expect(tvPage.getByRole('button', { name: 'إعدادات الجهاز', exact: true })).toHaveCount(
-      0,
-    );
+    await app.evaluate(({ BrowserWindow }) => {
+      const tv = BrowserWindow.getAllWindows().find(w => w.getTitle().includes('شاشة العرض'));
+      tv.focus();
+      tv.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' });
+    });
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()
+            .find(w => w.getTitle().includes('شاشة العرض'))
+            .isFullScreen(),
+        ),
+      )
+      .toBe(false);
+    await app.evaluate(({ BrowserWindow }) => {
+      const tv = BrowserWindow.getAllWindows().find(w => w.getTitle().includes('شاشة العرض'));
+      tv.focus();
+      tv.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'F11' });
+    });
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()
+            .find(w => w.getTitle().includes('شاشة العرض'))
+            .isFullScreen(),
+        ),
+      )
+      .toBe(true);
     const state = await page.evaluate(() => window.queue.tvStatus());
     await tvPage.evaluate(() => window.queue.pointer(false));
     expect(state.open).toBe(true);
@@ -224,24 +227,16 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const issued = await run(fixture.kiosk, 'issue', { serviceId: fixture.serviceId });
     await run(fixture.teller, 'next', { expectedRevision: 0 });
     await expect(tvPage.locator('.tv-ticket')).toHaveText(issued.ticket.code, { timeout: 15000 });
-    await expect
-      .poll(() => tvPage.evaluate(() => window.queueSpoken.length), { timeout: 20000 })
-      .toBe(1);
-    expect((await tvPage.evaluate(() => window.queueSpoken))[0].text).toBe(
-      'على صاحب التذكرة رقم A... واحد، التوجّه إلى الكاونتر رقم واحد.',
-    );
+    await expect.poll(() => tvPage.evaluate(() => window.queueAlerts), { timeout: 15000 }).toBe(2);
+    await expect(tvPage.locator('.tv-current-called')).toHaveCount(0, { timeout: 15000 });
+    expect(await tvPage.evaluate(() => window.queueSpoken.length)).toBe(0);
     await run(fixture.teller, 'recall', { expectedRevision: 1 });
-    await expect
-      .poll(() => tvPage.evaluate(() => window.queueSpoken.length), { timeout: 20000 })
-      .toBe(2);
-    const spoken = await tvPage.evaluate(() => window.queueSpoken);
-    expect(spoken[1]).toEqual(spoken[0]);
-    await pause(2300);
-    expect((await tvPage.evaluate(() => window.queueSpoken)).length).toBe(2);
-    await page.getByRole('button', { name: 'كتم النداء الصوتي', exact: true }).click();
+    await expect.poll(() => tvPage.evaluate(() => window.queueAlerts), { timeout: 15000 }).toBe(3);
+    await page.getByRole('button', { name: 'كتم صوت التنبيه', exact: true }).click();
     await run(fixture.teller, 'recall', { expectedRevision: 2 });
     await pause(2300);
-    expect((await tvPage.evaluate(() => window.queueSpoken)).length).toBe(2);
+    expect(await tvPage.evaluate(() => window.queueAlerts)).toBe(3);
+    expect(await tvPage.evaluate(() => window.queueSpoken.length)).toBe(0);
     await tvPage.screenshot({ path: path.join(root, 'test-results/hdmi-tv-current-ticket.png') });
     await page.screenshot({ path: path.join(root, 'test-results/manager-tv-audio-settings.png') });
     const savedAudio = JSON.parse(
@@ -250,8 +245,8 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     expect(savedAudio).toMatchObject({
       enabled: true,
       voiceEnabled: false,
-      alertEnabled: true,
-      mode: 'local',
+      alertEnabled: false,
+      mode: 'auto',
       volume: 0.95,
     });
     await page.getByRole('button', { name: 'إيقاف شاشة العرض', exact: true }).click();

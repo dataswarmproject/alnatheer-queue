@@ -6,6 +6,7 @@ import { connectionInfo, request, send } from './client';
 import type { TvStatus } from '../setup-contract';
 import { speechAudioSchema, type SpeechRequest } from '@saraf/queue-core/speech';
 import { desktopSpeechStatus, guardFreeSpeech } from './speech-policy';
+import { spokenAnnouncementsEnabled } from '../audio-contract';
 
 export function createTvController(
   rendererRoot: string,
@@ -83,7 +84,7 @@ export function createTvController(
       const win = new BrowserWindow({
         title: 'النذير · شاشة العرض',
         ...display.bounds,
-        frame: false,
+        frame: true,
         transparent: false,
         backgroundColor: '#000000',
         show: false,
@@ -103,6 +104,12 @@ export function createTvController(
       win.on('page-title-updated', event => event.preventDefault());
       win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       win.webContents.on('will-navigate', e => e.preventDefault());
+      win.webContents.on('before-input-event', (event, input) => {
+        if (input.type !== 'keyDown' || !['Escape', 'F11'].includes(input.key)) return;
+        event.preventDefault();
+        win.setFullScreen(input.key === 'F11' ? !win.isFullScreen() : false);
+        win.setSkipTaskbar(win.isFullScreen());
+      });
       win.on('closed', () => {
         if (window === win) void close();
       });
@@ -143,6 +150,7 @@ export function createTvController(
       );
     },
     speech: async (input: SpeechRequest) => {
+      if (!spokenAnnouncementsEnabled) throw new Error('النداء الصوتي غير متاح في هذا الإصدار.');
       if (!device) throw new Error('TV is closed');
       const activeDevice = device;
       await guardFreeSpeech(() => send(activeDevice, 'GET', '/v1/speech/status', undefined, 10000));

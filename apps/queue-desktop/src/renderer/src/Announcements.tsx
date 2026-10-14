@@ -4,6 +4,7 @@ import { announcementText, speechTestText, type SpeechRequest } from '@saraf/que
 import { playAnnouncement, playQueueAlert } from './play-announcement';
 import type { DesktopSpeechStatus } from '../../speech-policy';
 import type { AudioSettings } from '../../audio-contract';
+import { spokenAnnouncementsEnabled } from '../../audio-contract';
 export type CallPhase = 'preparing' | 'started' | 'finished' | 'stopped';
 export function Announcements({
   snapshot,
@@ -19,6 +20,7 @@ export function Announcements({
     [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]),
     [error, setError] = useState('');
   const pending = useRef<Snapshot['announcements']>([]),
+    testing = useRef(false),
     current = useRef<object | null>(null),
     active = useRef(false),
     latest = useRef({ snapshot, receivedAt: performance.now() });
@@ -35,6 +37,7 @@ export function Announcements({
   const volume = useRef(1);
   volume.current = settings?.volume ?? 1;
   useEffect(() => {
+    if (!spokenAnnouncementsEnabled) return;
     let alive = true;
     window.queue
       .speechStatus()
@@ -77,6 +80,7 @@ export function Announcements({
   const selectedVoice = useRef(voice);
   selectedVoice.current = voice;
   const stop = (clearQueue = true) => {
+    testing.current = false;
     callingListener.current?.(null, 'stopped');
     active.current = false;
     if (clearQueue) pending.current = [];
@@ -113,8 +117,9 @@ export function Announcements({
       unsubscribe();
     };
   }, []);
-  const engineReady = mode === 'natural' ? !!natural?.configured : !!voice;
-  const voiceEnabled = settings?.voiceEnabled ?? true;
+  const engineReady =
+    spokenAnnouncementsEnabled && (mode === 'natural' ? !!natural?.configured : !!voice);
+  const voiceEnabled = spokenAnnouncementsEnabled && (settings?.voiceEnabled ?? false);
   const alertEnabled = settings?.alertEnabled ?? true;
   const canVoice = voiceEnabled && engineReady;
   const ready = canVoice || alertEnabled;
@@ -329,10 +334,12 @@ export function Announcements({
       window.queue.onAudioTest(() => {
         if (!ready) return;
         stop();
+        testing.current = true;
         setError('');
         say(
           speechTestText,
           () => {
+            testing.current = false;
             active.current = !!settings?.enabled && (voiceEnabled || alertEnabled);
             drain();
           },
@@ -355,6 +362,10 @@ export function Announcements({
         Date.parse(snapshot.serverTime) - Date.parse(a.occurredAt) < 30000,
     );
     last.current = snapshot.announcements.at(-1)?.sequence ?? last.current;
+    if (testing.current && next.length) {
+      stop(false);
+      active.current = !!settings?.enabled && ready;
+    }
     if (!active.current) return;
     pending.current = [...pending.current, ...next].slice(-50);
     drain();
