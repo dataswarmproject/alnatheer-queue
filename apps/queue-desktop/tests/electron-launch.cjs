@@ -5,7 +5,16 @@ const path = require('node:path');
 module.exports = {
   async launch(options) {
     for (let attempt = 0; attempt < 2; attempt++) {
-      const app = await _electron.launch(options);
+      // Unlike Chromium launch, the Electron SDK omits these background flags.
+      // Tests run several branch PCs on one desktop with fullscreen displays.
+      const app = await _electron.launch({
+        ...options,
+        args: [
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          ...(options.args ?? []),
+        ],
+      });
       try {
         await app.firstWindow({ timeout: 15000 });
         return app;

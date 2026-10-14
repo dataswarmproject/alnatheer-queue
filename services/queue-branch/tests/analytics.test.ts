@@ -59,6 +59,25 @@ describe('performance evidence, not a fastest-teller leaderboard', () => {
     expect(report.counters[0].pausedSeconds).toBe(0);
     expect(() => analyticsSchema.parse(report)).not.toThrow();
   });
+  it('keeps full utilization at one across subsecond availability boundaries', () => {
+    const report = analyzeQueue(
+      [
+        { ...ev('start', 0, { ...base, status: 'serving', startedAt: from }), sequence: 1 },
+        { ...ev('resume', 100 / 60000, null), sequence: 2 },
+      ],
+      {
+        from,
+        to: new Date(Date.parse(from) + 300).toISOString(),
+        counters: [counter],
+        services: [],
+        openingCounters: [counter],
+        staff: [],
+        partial: false,
+      },
+    );
+    expect(report.counters[0].utilization).toBe(1);
+    expect(() => analyticsSchema.parse(report)).not.toThrow();
+  });
   it('measures wait to first start and separate service duration, not recall timestamps', () => {
     const events = [
       ev('issue', 0, base),

@@ -248,17 +248,18 @@ export function analyzeQueue(
       0,
     );
     const availableSeconds = availableMilliseconds / 1000;
-    const busySeconds = legs
+    const busyMilliseconds = legs
       .filter(l => l.counterId === counter.id)
       .reduce(
         (sum, l) =>
           sum +
           state.windows.reduce(
-            (s, [a, b]) => s + seconds(Math.max(a, l.from), Math.min(b, l.to)),
+            (s, [a, b]) => s + Math.max(0, Math.min(b, l.to) - Math.max(a, l.from)),
             0,
           ),
         0,
       );
+    const busySeconds = busyMilliseconds / 1000;
     const completedLegs = legs.filter(l => l.counterId === counter.id && l.complete);
     const durations = completedLegs.map(l => seconds(l.from, l.to));
     const ownWaits = counterWaits.get(counter.id) ?? [];
