@@ -43,7 +43,7 @@ Use a clean, reviewed main checkout. The script runs formatting, typechecks, rea
 
 An internal signature is accepted for publication only after Windows validates it on the signing machine. A public timestamp authority is used by SignTool; no paid timestamp account is created. Failed timestamps/signatures stop release publication.
 
-To publish, create and push `queue-vX.Y.Z` at the exact reviewed main commit, with all package versions matching, then run the same script with `-Publish`. It refuses overwriting an existing release and requires the dedicated private repository. The existing unsigned 0.4.1 release is unchanged. The next source version is 0.4.2; a trusted 0.4.2 installer has not yet been issued.
+To publish, create and push `queue-vX.Y.Z` at the exact reviewed main commit, with all package versions matching, then run the same script with `-Publish`. It refuses overwriting an existing release and requires the dedicated private repository. The existing unsigned 0.4.1 release is unchanged. A Windows-signed and timestamped 0.4.2 installer has been built for a manual internal IT pilot. Its Windows signatures, packaged runtime, installer digest and release-manifest signature were verified. Signing-account trust is enrolled; each branch PC still needs IT-approved public-certificate trust. The IT pilot is a prerelease and does not replace the stable automatic-update release.
 
 ## 4. Optional free self-hosted automation
 
