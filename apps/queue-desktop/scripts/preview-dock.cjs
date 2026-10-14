@@ -27,7 +27,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       stdio: ['ignore', 'ignore', 'pipe'],
     },
   );
-  let app;
+  let app, tvApp;
   try {
     let pairing;
     for (let i = 0; i < 120; i++) {
@@ -61,6 +61,42 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     console.log(
       'Side dock is open: empty local preview, six actions, no customer tickets, no SARAF connection.',
     );
+    if (process.argv.includes('--tv')) {
+      const tvProfile = path.join(directory, 'tv-profile');
+      await fs.mkdir(tvProfile);
+      tvApp = await electron.launch({
+        executablePath: require('electron'),
+        args: [appRoot],
+        env: { ...env, QUEUE_TEST_PROFILE: tvProfile },
+      });
+      const tvSetup = await tvApp.firstWindow();
+      await tvSetup.getByText('شاشات مستقلة · إعداد متقدم', { exact: true }).click();
+      await tvSetup.getByRole('button', { name: 'شاشة انتظار مستقلة', exact: true }).click();
+      await tvSetup.getByLabel('عنوان خدمة الفرع').fill(pairing.url);
+      await tvSetup.getByLabel('مفتاح الجهاز', { exact: true }).fill(pairing.displayToken);
+      const tvAppeared = tvApp.waitForEvent('window');
+      await tvSetup.getByRole('button', { name: 'اتصال', exact: true }).click();
+      const tvPage = await tvAppeared;
+      await expect(tvPage.locator('.customer-logo')).toBeVisible();
+      const external = await tvApp.evaluate(({ BrowserWindow, screen }) => {
+        const display = screen.getAllDisplays().find(d => d.id !== screen.getPrimaryDisplay().id);
+        const window = BrowserWindow.getAllWindows()[0];
+        if (display) {
+          window.setBounds(display.bounds);
+          window.setFullScreen(true);
+        } else {
+          window.setFullScreen(false);
+          window.setBounds({ x: 160, y: 80, width: 1100, height: 700 });
+        }
+        window.show();
+        return !!display;
+      });
+      console.log(
+        external
+          ? 'TV preview opened on the connected secondary display.'
+          : 'TV preview opened in a window; no secondary display detected.',
+      );
+    }
     if (process.argv.includes('--expanded')) {
       await page.getByRole('button', { name: 'توسيع عرض قائمة الانتظار' }).click();
       await expect(page.getByRole('button', { name: 'تصغير إلى الشريط' })).toBeVisible();
@@ -85,9 +121,14 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       });
       console.log('Expanded teller panel is centered on the current display work area.');
     }
-    await new Promise(resolve => app.on('close', resolve));
+    await Promise.all(
+      [app, tvApp]
+        .filter(Boolean)
+        .map(instance => new Promise(resolve => instance.on('close', resolve))),
+    );
   } finally {
     if (app) await app.close().catch(() => {});
+    if (tvApp) await tvApp.close().catch(() => {});
     host.kill();
     await pause(300);
     if (

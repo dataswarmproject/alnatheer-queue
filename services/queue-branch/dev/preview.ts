@@ -23,6 +23,7 @@ const teller = await store.provision('teller', counterId, {
   name: 'معاينة محلية',
   staffRef: 'LOCAL-PREVIEW',
 });
+const display = await store.provision('display', null);
 const server = createBranchServer(store);
 await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
 await writeFile(
@@ -30,6 +31,7 @@ await writeFile(
   JSON.stringify({
     url: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
     token: teller.token,
+    displayToken: display.token,
   }),
   { mode: 0o600 },
 );

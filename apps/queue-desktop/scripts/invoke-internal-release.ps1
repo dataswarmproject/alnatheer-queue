@@ -30,6 +30,10 @@ try {
   foreach ($package in @('packages/queue-core/package.json','services/queue-branch/package.json')) {
     if ((Get-Content -LiteralPath $package -Raw | ConvertFrom-Json).version -cne $version) { throw 'Package versions differ' }
   }
+  $coreSource = Get-Content -LiteralPath 'packages/queue-core/src/server.ts' -Raw
+  if ($coreSource -notmatch "queueVersion = '([0-9.]+)'" -or $Matches[1] -cne $version) {
+    throw 'Reported branch-service version differs from installer version'
+  }
   $record = Get-Content -LiteralPath $SignerReceipt -Raw | ConvertFrom-Json
   if ($record.trust -cne 'internal-only' -or $record.publisher -cne 'Digital Trendz') { throw 'Unexpected internal signer receipt' }
   $env:QUEUE_SIGNING_MODE = 'internal'
