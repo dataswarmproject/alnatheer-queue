@@ -47,14 +47,20 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       env: { ...env, QUEUE_TEST_PROFILE: profile },
     });
     const page = await app.firstWindow();
-    const connection = await page.evaluate(() => window.queue.connection());
-    if (connection.configured) await page.evaluate(() => window.queue.disconnect());
-    await expect(page.getByRole('button', { name: /^إدارة الفرع/ })).toBeVisible();
-    await page.getByRole('button', { name: /^إدارة الفرع/ }).click();
-    await page.getByLabel('عنوان خدمة الفرع').fill(pairing.url);
-    await page.getByLabel('مفتاح الجهاز', { exact: true }).fill(pairing.token);
-    await page.getByRole('button', { name: 'اتصال', exact: true }).click();
-    await page.getByRole('button', { name: 'الإعدادات', exact: true }).click();
+    // The isolated host chooses a fresh loopback port on every launch. Refresh its
+    // validated pairing without making the owner repeat setup or clearing data.
+    await page.evaluate(input => window.queue.connect(input), {
+      url: pairing.url,
+      token: pairing.token,
+      mode: 'manager',
+    });
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'شاشات العرض', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'شاشات العرض', exact: true }).click();
+    await fs.mkdir(path.join(root, 'test-results'), { recursive: true });
+    await page.screenshot({
+      path: path.join(root, 'test-results/manager-production-display-settings.png'),
+    });
     console.log(
       'Updated manager app is open on its isolated local database. No operational sample data or HQ connection. Close the app to stop this preview; entered records are preserved locally.',
     );
