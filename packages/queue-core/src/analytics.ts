@@ -243,7 +243,11 @@ export function analyzeQueue(
     if (state.known && !state.paused) state.windows.push([state.since, to]);
   const counterRows = options.counters.map(counter => {
     const state = availability.get(counter.id)!;
-    const availableSeconds = state.windows.reduce((sum, [a, b]) => sum + seconds(a, b), 0);
+    const availableMilliseconds = state.windows.reduce(
+      (sum, [a, b]) => sum + Math.max(0, b - a),
+      0,
+    );
+    const availableSeconds = availableMilliseconds / 1000;
     const busySeconds = legs
       .filter(l => l.counterId === counter.id)
       .reduce(
@@ -264,7 +268,9 @@ export function analyzeQueue(
       archived: !!counter.archived,
       ...(byCounter.get(counter.id) ?? counts()),
       availableSeconds,
-      pausedSeconds: state.known ? seconds(state.knownFrom, to) - availableSeconds : null,
+      pausedSeconds: state.known
+        ? Math.max(0, to - state.knownFrom - availableMilliseconds) / 1000
+        : null,
       unknownSeconds: seconds(from, state.knownFrom),
       busySeconds,
       utilization: availableSeconds ? busySeconds / availableSeconds : null,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { analyzeQueue } from '@saraf/queue-core/analytics';
+import { analyticsSchema } from '@saraf/queue-core/analytics-contract';
 import type { QueueEvent, Ticket, Counter } from '@saraf/queue-core';
 
 describe('performance evidence, not a fastest-teller leaderboard', () => {
@@ -43,6 +44,20 @@ describe('performance evidence, not a fastest-teller leaderboard', () => {
     kind,
     occurredAt: new Date(Date.parse(from) + minute * 60000).toISOString(),
     payload: { ticket, counter: counterBody, configuration: null },
+  });
+  it('accepts an unpaused counter with subsecond availability boundaries', () => {
+    const report = analyzeQueue([{ ...ev('resume', 100 / 60000, null), sequence: 1 }], {
+      from,
+      to: new Date(Date.parse(from) + 300).toISOString(),
+      counters: [counter],
+      services: [],
+      openingCounters: [counter],
+      staff: [],
+      partial: false,
+    });
+    expect(report.counters[0].availableSeconds).toBe(0.3);
+    expect(report.counters[0].pausedSeconds).toBe(0);
+    expect(() => analyticsSchema.parse(report)).not.toThrow();
   });
   it('measures wait to first start and separate service duration, not recall timestamps', () => {
     const events = [
