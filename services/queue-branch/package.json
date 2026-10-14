@@ -1,0 +1,33 @@
+{
+  "name": "@saraf/queue-branch",
+  "version": "0.4.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --import tsx src/main.ts",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "setup": "tsx src/setup.ts",
+    "restore": "tsx src/restore.ts",
+    "prepare:speech": "node --env-file-if-exists=.env --import tsx src/prepare-speech.ts",
+    "prepare:speech:local": "node --import tsx src/prepare-local-speech.ts",
+    "verify:speech:local": "node --import tsx src/verify-local-speech.ts",
+    "build": "esbuild src/main.ts src/setup.ts src/restore.ts src/prepare-speech.ts --bundle --platform=node --format=esm --external:@electric-sql/pglite --outdir=dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.9",
+    "@saraf/queue-core": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "0.28.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  }
+}

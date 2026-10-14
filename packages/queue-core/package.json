@@ -1,0 +1,33 @@
+{
+  "name": "@saraf/queue-core",
+  "version": "0.4.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./update-release": "./src/update-release.ts",
+    "./github-release-broker": "./src/github-release-broker.ts",
+    "./release-trust": "./src/release-trust.ts",
+    "./dates": "./src/dates.ts",
+    "./operations": "./src/operations.ts",
+    "./counters": "./src/counters.ts",
+    ".": "./src/index.ts",
+    "./receiver": "./src/receiver.ts",
+    "./analytics": "./src/analytics.ts",
+    "./analytics-contract": "./src/analytics-contract.ts",
+    "./analytics-evidence": "./src/analytics-evidence.ts",
+    "./device": "./src/device.ts",
+    "./server": "./src/server.ts",
+    "./headquarters": "./src/headquarters.ts",
+    "./speech": "./src/speech.ts"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

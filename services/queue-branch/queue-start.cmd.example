@@ -1,0 +1,18 @@
+@echo off
+rem Copy outside the installation folder to a private service-account folder.
+rem Replace INSTALL_DIR and BRANCH_ID. LAN sharing requires trusted TLS.
+set "INSTALL_DIR=C:\Users\SERVICE_ACCOUNT\AppData\Local\Programs\Alnatheer Queue"
+set "QUEUE_BRANCH_ID=REPLACE_WITH_REAL_SARAF_BRANCH_UUID"
+set "QUEUE_DATA_DIR=D:\AlnatheerQueue\data"
+set "QUEUE_REPORT_DIR=D:\AlnatheerQueue\reports"
+set "QUEUE_BACKUP_DIR=D:\AlnatheerQueue\backups"
+set "QUEUE_LISTEN_HOST=127.0.0.1"
+set "QUEUE_LISTEN_PORT=4318"
+rem For LAN devices configure host/cert/key; never bypass certificate validation.
+rem set "QUEUE_TLS_CERT=D:\AlnatheerQueue\private\branch.crt"
+rem set "QUEUE_TLS_KEY=D:\AlnatheerQueue\private\branch.key"
+rem Sync is optional. Store the raw branch key only in private configuration.
+rem set "QUEUE_SYNC_URL=https://SARAF_HOST/api/queue/sync"
+rem set "QUEUE_SYNC_KEY=PRIVATE_BRANCH_SYNC_KEY"
+call "%INSTALL_DIR%\resources\branch\queue-host.cmd"
+exit /b %errorlevel%

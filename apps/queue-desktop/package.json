@@ -1,0 +1,127 @@
+{
+  "name": "@saraf/queue-desktop",
+  "productName": "Alnatheer Queue",
+  "version": "0.4.1",
+  "description": "Alnatheer branch queue desktop and teller dock",
+  "author": "Alnatheer",
+  "private": true,
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "build": "node scripts/prepare-fonts.cjs && electron-vite build && node scripts/write-update-policy.cjs",
+    "typecheck": "tsc --noEmit",
+    "package:win": "node scripts/prepare-voice-library.cjs && pnpm --filter @saraf/queue-branch verify:speech:local --library ../../apps/queue-desktop/release/arabic-voice-library-free && pnpm --filter @saraf/queue-branch build && pnpm build && electron-builder --config scripts/windows-build.cjs --win nsis",
+    "test:e2e": "node tests/desktop-smoke.cjs",
+    "test:devices": "node tests/all-devices.cjs",
+    "test:setup": "node tests/setup-flow.cjs && node tests/hdmi-flow.cjs",
+    "test:tickets": "pnpm --filter @saraf/queue-branch exec tsx ../../apps/queue-desktop/tests/ticket-preview.ts && node tests/ticket-layout.cjs",
+    "test:voice": "node tests/natural-voice.cjs",
+    "test:audio-controls": "node tests/audio-controls.cjs",
+    "test:hdmi:hardware": "node tests/hdmi-hardware.cjs",
+    "test:tv": "node tests/tv-board.cjs",
+    "test:manager": "node tests/manager-counters.cjs && node tests/manager-operations.cjs",
+    "preview:dock": "electron-vite build && node scripts/preview-dock.cjs",
+    "test:package": "node tests/package-smoke.cjs",
+    "preview:manager": "pnpm build && node scripts/preview-manager.cjs",
+    "release:sign": "node scripts/sign-release.cjs"
+  },
+  "dependencies": {
+    "@saraf/queue-core": "workspace:*",
+    "electron-updater": "6.8.10",
+    "iconoir-react": "7.12.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^22.20.5",
+    "@types/react": "18.3.28",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "7.3.7"
+  },
+  "build": {
+    "appId": "com.alnatheer.queue",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "allowElevation": false
+    },
+    "asar": true,
+    "extraResources": [
+      {
+        "to": "branch/voice-library-free",
+        "from": "release/arabic-voice-library-free",
+        "filter": [
+          "manifest.json",
+          "generation-report.json",
+          "speech-cache/**/*",
+          "samples/*.mp3",
+          "pronunciation-samples.html",
+          "*-LICENSE.txt",
+          "VOICE-LICENSES.md",
+          "requirements-installed.txt"
+        ]
+      },
+      {
+        "to": "branch/voice-plan-10x999.json",
+        "from": "../../services/queue-branch/voice-plan-10x999.json"
+      },
+      {
+        "to": "branch/queue-prepare-speech.cmd",
+        "from": "../../services/queue-branch/queue-prepare-speech.cmd"
+      },
+      {
+        "to": "branch",
+        "from": "../../services/queue-branch/dist"
+      },
+      {
+        "to": "branch/node_modules/@electric-sql/pglite",
+        "from": "../../services/queue-branch/node_modules/@electric-sql/pglite"
+      },
+      {
+        "to": "branch/queue-host.cmd",
+        "from": "../../services/queue-branch/queue-host.cmd"
+      },
+      {
+        "to": "branch/queue-setup.cmd",
+        "from": "../../services/queue-branch/queue-setup.cmd"
+      },
+      {
+        "to": "branch/queue-restore.cmd",
+        "from": "../../services/queue-branch/queue-restore.cmd"
+      },
+      {
+        "to": "branch/queue-start.cmd.example",
+        "from": "../../services/queue-branch/queue-start.cmd.example"
+      }
+    ],
+    "icon": "src/renderer/public/icon.png"
+  }
+}

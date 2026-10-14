@@ -1,0 +1,7 @@
+# Calling highlight — 0.3.3
+
+The current-ticket panel is dark between announcements and while voice audio is being prepared. New calls and recalls turn it white with logo-pink text when the alert starts. The user's replacement `alert-audio.mp3` is bundled unchanged as `queue-alert-sound.mp3` and plays first, followed by the ticket/counter voice without overlapping. The highlight stays active through the alert and voice, remains white for **five seconds after the voice finishes**, then fades to black over 400 ms. Mute or playback failure clears it immediately. Without audio, the visual cue lasts five seconds from the server's call timestamp. Starting service clears this silent cue immediately. Reduced-motion preferences disable the fade.
+
+The ticket and counter remain visible after the panel returns to black. Initial connection does not highlight old calls, routine refreshes do not extend the cue, and a queued announcement cannot highlight a different ticket's panel. The ten-counter board and its current-ticket values remain unchanged.
+
+Verification: native TV test exercises old-call connection, new recall, timeout back to black, retained ticket, subsequent recall and service start. Native audio test exercises both complete recordings and composed phrases, checks alert-before-voice order and the post-voice highlight before return to black. Fixtures use disposable branch data and supplied test audio; this does not certify physical HDMI output or generated speech quality.

@@ -1,0 +1,51 @@
+PROPRIETARY LICENSE
+Copyright (c) 2026 Abdullah Othman Alnatheer & Sons For Exchange Co.
+All rights reserved.
+
+This software, including its source code, documentation, design,
+configuration, and accompanying materials (collectively, the "Software"),
+is the proprietary property of Abdullah Othman Alnatheer & Sons For
+Exchange Co. ("Alnatheer Exchange"), developed by Digital Trendz under
+contract DT-2025-NAT-001.
+
+NO LICENSE IS GRANTED to copy, modify, distribute, sublicense, sell, or
+make derivative works of the Software, in whole or in part, by any party
+other than Alnatheer Exchange and its expressly authorized contractors
+and employees, without the prior written authorization of Alnatheer
+Exchange.
+
+The Software contains confidential and trade-secret information. Access
+is granted on a need-to-know basis and subject to the Alnatheer Exchange
+non-disclosure obligations.
+
+REGULATED-INDUSTRY NOTICE.
+The Software is designed for use by an exchange firm licensed and
+regulated by the Saudi Central Bank ("SAMA") under the laws of the
+Kingdom of Saudi Arabia. Use of the Software is subject to SAMA
+regulations, the Anti-Money Laundering Law (Royal Decree M/20),
+the Personal Data Protection Law, and other applicable Saudi laws and
+regulations. Unauthorized use, modification, or operation in a manner
+inconsistent with these laws is strictly prohibited.
+
+THIRD-PARTY COMPONENTS.
+The Software incorporates open-source components under their respective
+licenses. The list of components and their licenses is enumerated in the
+package manifests (package.json, requirements.txt) and locked dependency
+files. Use of those components is governed by their original licenses;
+nothing in this notice restricts rights granted under those licenses.
+
+NO WARRANTY.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+IN NO EVENT SHALL ALNATHEER EXCHANGE OR DIGITAL TRENDZ BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For licensing inquiries or to request written authorization, contact:
+  legal@alnatheer.com
+
+For security vulnerabilities, see SECURITY.md.
+
+END OF LICENSE

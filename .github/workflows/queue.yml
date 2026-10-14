@@ -1,0 +1,93 @@
+name: Queue quality and private releases
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ['queue-v*']
+permissions:
+  contents: read
+concurrency:
+  group: queue-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.26.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --check "packages/queue-core/**/*.{ts,json}" "services/queue-branch/**/*.{ts,json}" "apps/queue-desktop/src/**/*.{ts,tsx,css}" "apps/queue-desktop/scripts/*.{cjs,json}" "apps/queue-desktop/tests/*.cjs" "README.md" ".github/workflows/*.yml"
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm --filter @saraf/queue-branch build
+      - run: pnpm audit --prod --audit-level=high
+  release:
+    if: startsWith(github.ref, 'refs/tags/queue-v')
+    needs: quality
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.26.2'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Validate version and tag
+        run: |
+          $releaseVersion = (Get-Content apps/queue-desktop/package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -cne "queue-v$releaseVersion") { throw 'Release tag/version mismatch' }
+          foreach ($packageFile in @('services/queue-branch/package.json','packages/queue-core/package.json')) {
+            if ((Get-Content $packageFile | ConvertFrom-Json).version -cne $releaseVersion) { throw 'Package versions differ' }
+          }
+      - run: pnpm install --frozen-lockfile
+      - name: Restore private build inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUEUE_FONT_BUILD_KEY: ${{ secrets.QUEUE_FONT_BUILD_KEY }}
+        run: |
+          New-Item -ItemType Directory -Path .build-inputs | Out-Null
+          gh release download queue-build-inputs --repo $env:GITHUB_REPOSITORY --pattern font-build-input.enc --pattern voice-library.zip --dir .build-inputs
+          if ($LASTEXITCODE -ne 0) { throw 'Private build inputs unavailable' }
+          node apps/queue-desktop/scripts/restore-build-inputs.cjs .build-inputs
+          if ($LASTEXITCODE -ne 0) { throw 'Build input verification failed' }
+          Expand-Archive -LiteralPath .build-inputs/voice-library.zip -DestinationPath .build-inputs/voice
+          "QUEUE_FONT_ARCHIVE=$((Resolve-Path .build-inputs/fonts.zip).Path)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "QUEUE_VOICE_LIBRARY_DIRECTORY=$((Resolve-Path .build-inputs/voice).Path)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - run: pnpm build
+      - run: node apps/queue-desktop/scripts/prepare-voice-library.cjs
+      - run: pnpm --filter @saraf/queue-desktop test:setup
+      - run: pnpm --filter @saraf/queue-desktop test:devices
+      - run: pnpm --filter @saraf/queue-desktop test:manager
+      - run: pnpm --filter @saraf/queue-desktop test:tickets
+      - run: pnpm --filter @saraf/queue-desktop test:audio-controls
+      - run: pnpm package:win
+      - run: pnpm --filter @saraf/queue-desktop test:package
+      - name: Sign verified release
+        env:
+          QUEUE_RELEASE_SIGNING_KEY: ${{ secrets.QUEUE_RELEASE_SIGNING_KEY }}
+        run: pnpm --filter @saraf/queue-desktop release:sign
+      - name: Publish private release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME apps/queue-desktop/release/alnatheer-queue-*-windows-x64.exe apps/queue-desktop/release/queue-release.json --verify-tag --title "Alnatheer Queue $env:GITHUB_REF_NAME" --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: queue-windows-evidence
+          path: apps/queue-desktop/test-results/*.png
+          retention-days: 14

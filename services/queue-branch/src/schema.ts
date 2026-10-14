@@ -1,0 +1,23 @@
+export const branchSchema = `
+CREATE TABLE IF NOT EXISTS queue_meta (singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton), branch_id uuid NOT NULL, next_sequence bigint NOT NULL DEFAULT 1, acknowledged bigint NOT NULL DEFAULT 0, last_success text);
+ALTER TABLE queue_meta ADD COLUMN IF NOT EXISTS last_attempt text;
+ALTER TABLE queue_meta ADD COLUMN IF NOT EXISTS last_error text;
+ALTER TABLE queue_meta ADD COLUMN IF NOT EXISTS last_backup jsonb;
+CREATE TABLE IF NOT EXISTS queue_services (id uuid PRIMARY KEY, body jsonb NOT NULL, prefix text NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS queue_counters (id uuid PRIMARY KEY, body jsonb NOT NULL);
+CREATE TABLE IF NOT EXISTS queue_devices (id uuid PRIMARY KEY, token_hash text NOT NULL UNIQUE, role text NOT NULL CHECK(role IN ('manager','teller','kiosk','display')), counter_id uuid REFERENCES queue_counters(id), enabled boolean NOT NULL DEFAULT true, name text, staff_ref text);
+ALTER TABLE queue_devices ADD COLUMN IF NOT EXISTS name text;
+ALTER TABLE queue_devices ADD COLUMN IF NOT EXISTS staff_ref text;
+CREATE UNIQUE INDEX IF NOT EXISTS queue_counter_device ON queue_devices(counter_id) WHERE role='teller' AND enabled;
+CREATE TABLE IF NOT EXISTS queue_sequences (service_id uuid NOT NULL REFERENCES queue_services(id), day text NOT NULL, next_value integer NOT NULL, PRIMARY KEY(service_id,day));
+CREATE TABLE IF NOT EXISTS queue_tickets (id uuid PRIMARY KEY, body jsonb NOT NULL, service_id uuid NOT NULL REFERENCES queue_services(id), counter_id uuid REFERENCES queue_counters(id), status text NOT NULL CHECK(status IN ('waiting','called','serving','completed','no_show')), day text NOT NULL, issued_at timestamptz NOT NULL, queued_at timestamptz NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS queue_active_counter ON queue_tickets(counter_id) WHERE status IN ('called','serving');
+CREATE INDEX IF NOT EXISTS queue_waiting ON queue_tickets(status, queued_at);
+CREATE INDEX IF NOT EXISTS queue_ticket_day ON queue_tickets(day,status);
+CREATE TABLE IF NOT EXISTS queue_events (sequence bigint PRIMARY KEY, id uuid NOT NULL UNIQUE, body jsonb NOT NULL);
+CREATE INDEX IF NOT EXISTS queue_event_time ON queue_events ((body->>'branchId'),(body->>'occurredAt'),sequence);
+CREATE INDEX IF NOT EXISTS queue_event_ticket ON queue_events ((body->'payload'->'ticket'->>'id'),sequence);
+CREATE INDEX IF NOT EXISTS queue_event_counter ON queue_events ((body->'payload'->'counter'->>'id'),sequence);
+CREATE INDEX IF NOT EXISTS queue_event_calls ON queue_events(sequence) WHERE body->>'kind' IN ('next','recall');
+CREATE TABLE IF NOT EXISTS queue_receipts (actor_id uuid NOT NULL, request_id uuid NOT NULL, command_hash text NOT NULL, result jsonb NOT NULL, PRIMARY KEY(actor_id,request_id));
+`;
