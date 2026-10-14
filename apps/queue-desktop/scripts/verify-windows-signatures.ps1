@@ -6,6 +6,9 @@ param(
   [ValidateSet('internal','public')][string]$Mode = 'internal'
 )
 $ErrorActionPreference = 'Stop'
+# A PowerShell 7 parent can pass its module paths to Windows PowerShell.
+# Load the security module belonging to this verifier's actual host.
+Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1') -ErrorAction Stop
 foreach ($file in $Files) {
   $resolved = (Resolve-Path -LiteralPath $file).Path
   $signature = Get-AuthenticodeSignature -LiteralPath $resolved
