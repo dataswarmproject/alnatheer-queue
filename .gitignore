@@ -82,3 +82,7 @@ queue-dependencies.local.json
 **/operations.json
 # Locally exported report proofs are data, not application source.
 /apps/queue-desktop/queue-performance-*.json
+# Signing private keys and local identity records must stay outside Git.
+*.pfx
+*.p12
+signer.json

@@ -12,15 +12,17 @@ The installer asks which role the PC will use. Set up one branch host, configure
 
 ## Private releases
 
-Push a reviewed `queue-vX.Y.Z` tag whose version matches all three packages. CI runs formatting, types, real branch integration tests, runtime audit, Windows desktop workflows and packaged-runtime qualification. Only a passing release build signs `queue-release.json` and publishes the Windows installer. Release signatures use a pinned Ed25519 public key; the private signing key is an encrypted release secret. It must be backed up securely and cannot be silently rotated.
+The free internal signing workflow is manual and uses an existing Windows PC. Follow [the Digital Trendz internal signing guide](docs/QUEUE_FREE_SIGNING.md) to create a non-exportable local signing key and explicitly deploy its public certificate on approved branch PCs. This establishes internal publisher trust; public SmartScreen reputation remains separate. No paid certificate or signing subscription is configured.
+
+The self-hosted workflow runs only reviewed main, validates formatting/types, real branch tests, runtime audit, native desktop workflows and packaged-runtime qualification. Windows publisher signatures and timestamps must validate before the existing Ed25519 release manifest is signed. Publishing is off by default and requires a matching `queue-vX.Y.Z` tag. The Windows signing key stays in the local signing account; the separate Ed25519 key stays outside Git or in the existing encrypted release secret. Keys cannot be silently rotated.
 
 Licensed font inputs are encrypted in the private `queue-build-inputs` prerelease. CI decrypts them only on the release runner. The free offline Arabic bundle is verified against committed checksums and its recording manifest. Raw font source files are not published as installation assets.
 
 SARAF serves `/api/queue/updates` using a server-only fine-grained GitHub token with Contents:read for this repository. Active registered branches use their existing HQ synchronization key. Clients never receive GitHub credentials and verify signatures and installer hashes themselves. Until the HQ route and credential are deployed, the app reports the source as unavailable and does not offer a fake update.
 
-A Windows code-signing certificate is not configured. Signed release manifests provide application-level release verification; initial Windows installation can still show an unknown publisher. Upgrades preserve existing branch databases and settings and require a verified backup and no open tickets. Teller/kiosk PCs currently install the release separately.
+The existing 0.4.1 installer is unsigned. A free internal publisher certificate and signing scripts are prepared, but trust enrollment and the first Windows-signed package are still pending. Upgrades preserve existing branch databases and settings and require a verified backup and no open tickets. Teller/kiosk PCs currently install the release separately.
 
-The initial 0.4.1 installer was built and qualified locally. GitHub reported that the account's Actions budget prevented the hosted jobs from starting. Automatic future builds require resolving that account setting or configuring an authorized self-hosted runner; no billing setting was changed. Existing 0.4.0 evaluation installs require manually installing 0.4.1 once to bootstrap this signed-manifest update path.
+The initial 0.4.1 installer was built and qualified locally. GitHub reported that the account's Actions budget prevented hosted jobs from starting. The workflow now uses an optional manual self-hosted Windows runner; none has been registered and no billing setting was changed. Existing 0.4.0 evaluation installs require manually installing 0.4.1 once to bootstrap the signed-manifest update path.
 
 ## Scope of qualification
 

@@ -6,6 +6,13 @@ const fs = require('node:fs'),
   const root = path.resolve(__dirname, '..'),
     version = require('../package.json').version;
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Stable version required');
+  require('./verify-windows-signatures.cjs').verifyWindowsSignatures(
+    [
+      path.join(root, 'release/win-unpacked/Alnatheer Queue.exe'),
+      path.join(root, `release/Alnatheer Queue Setup ${version}.exe`),
+    ],
+    process.env.QUEUE_REQUIRE_WINDOWS_SIGNATURE === '1',
+  );
   const key = crypto.createPrivateKey(
     process.env.QUEUE_RELEASE_SIGNING_KEY ||
       fs.readFileSync(
