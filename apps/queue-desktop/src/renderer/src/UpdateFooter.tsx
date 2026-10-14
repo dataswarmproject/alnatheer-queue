@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Download, RefreshDouble, Xmark } from 'iconoir-react';
 import type { UpdateAction, UpdateStatus } from '../../update-contract';
 import { Badge } from './Badge';
+import { Form } from './Form';
 export function UpdateFooter() {
   const [status, setStatus] = useState<UpdateStatus | null>(null),
     [open, setOpen] = useState(false),
@@ -161,7 +162,7 @@ export function UpdateFooter() {
               )}
             </div>
             {available && (
-              <form
+              <Form
                 onSubmit={e => {
                   e.preventDefault();
                   const date = new Date(at + ':00+03:00');
@@ -195,7 +196,7 @@ export function UpdateFooter() {
                     </button>
                   )}
                 </div>
-              </form>
+              </Form>
             )}
             <p>
               يُتحقق من توقيع الإصدار وسلامة الملف قبل التثبيت. تُنشأ نسخة احتياطية متحققة ويُنتظر

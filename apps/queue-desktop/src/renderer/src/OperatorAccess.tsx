@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Form } from './Form';
 export function OperatorAccess({
   onClose,
   onUnlocked,
@@ -13,7 +14,7 @@ export function OperatorAccess({
     <main className="panel device-settings setup">
       <h1>إعدادات المشرف</h1>
       <p>أدخل مفتاح مدير الفرع لفتح إعدادات هذا الجهاز مؤقتًا.</p>
-      <form
+      <Form
         onSubmit={async e => {
           e.preventDefault();
           setBusy(true);
@@ -34,6 +35,10 @@ export function OperatorAccess({
           مفتاح مدير الفرع
           <input
             type="password"
+            placeholder="الصق مفتاح مدير الفرع"
+            dir="ltr"
+            pattern="[a-f0-9]{64}"
+            title="الصق مفتاح مدير الفرع كاملًا: 64 حرفًا ورقمًا."
             autoComplete="off"
             value={key}
             onChange={e => setKey(e.target.value)}
@@ -45,7 +50,7 @@ export function OperatorAccess({
         <button className="primary" disabled={busy}>
           فتح إعدادات المشرف
         </button>
-      </form>
+      </Form>
       {error && (
         <p role="alert" className="error">
           {error}

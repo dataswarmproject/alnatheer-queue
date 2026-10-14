@@ -3,6 +3,7 @@ import type { Command, Counter } from '@saraf/queue-core';
 import { counterNumber as numberOf } from '@saraf/queue-core/counters';
 import { Plus, EditPencil, Trash, Pause, Play, RefreshDouble, StatsUpSquare } from 'iconoir-react';
 import type { QueueController } from './useQueue';
+import { Form } from './Form';
 
 export function CounterManagement({
   queue,
@@ -86,7 +87,7 @@ export function CounterManagement({
         </button>
       </div>
       {editing && (
-        <form
+        <Form
           className="counter-editor"
           onSubmit={e => {
             e.preventDefault();
@@ -176,7 +177,7 @@ export function CounterManagement({
               إلغاء
             </button>
           </div>
-        </form>
+        </Form>
       )}
       <div className="counter-cards">
         {[...snapshot.counters]

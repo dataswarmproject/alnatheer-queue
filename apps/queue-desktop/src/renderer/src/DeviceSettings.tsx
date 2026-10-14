@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Form } from './Form';
 import { Xmark, Printer } from 'iconoir-react';
 import { DisplayAudioSettings } from './DisplayAudioSettings';
 import {
@@ -56,7 +57,7 @@ export function DeviceSettings({
         <h2>
           <Printer /> طابعة التذاكر
         </h2>
-        <form
+        <Form
           onSubmit={async e => {
             e.preventDefault();
             setBusy(true);
@@ -123,6 +124,8 @@ export function DeviceSettings({
             العودة لاختيار الخدمة بعد الطباعة (ثانية)
             <input
               type="number"
+              placeholder="مثال: 10"
+              dir="ltr"
               min={5}
               max={60}
               disabled={busy}
@@ -136,7 +139,7 @@ export function DeviceSettings({
           <button className="primary" disabled={busy}>
             حفظ إعدادات الجهاز
           </button>
-        </form>
+        </Form>
         {saved && <p role="status">تم حفظ إعدادات الجهاز.</p>}
         {error && (
           <p className="error" role="alert">

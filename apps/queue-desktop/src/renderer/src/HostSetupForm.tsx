@@ -111,7 +111,9 @@ export function HostSetupForm({
               disabled={busy}
               required
               dir="ltr"
-              placeholder="UUID"
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              autoComplete="off"
+              spellCheck={false}
               aria-describedby="branch-id-help"
             />
           </label>
@@ -140,7 +142,13 @@ export function HostSetupForm({
           <label>
             مجلد بيانات الفرع
             <span className="path-picker">
-              <input value={directory} readOnly dir="ltr" />
+              <input
+                value={directory}
+                readOnly
+                dir="ltr"
+                placeholder="اختر مجلدًا محليًا فارغًا"
+                aria-describedby="database-folder-help"
+              />
               <button
                 type="button"
                 aria-label="اختيار مجلد فارغ"
@@ -151,6 +159,7 @@ export function HostSetupForm({
               </button>
             </span>
           </label>
+          <small id="database-folder-help">تُنشأ قاعدة البيانات تلقائيًا داخل هذا المجلد.</small>
           <label className="checkbox setup-startup">
             <input
               type="checkbox"
@@ -180,6 +189,8 @@ export function HostSetupForm({
                 min={1024}
                 max={65535}
                 value={port}
+                placeholder="4318"
+                dir="ltr"
                 disabled={busy}
                 onChange={e => setPort(Number(e.target.value))}
               />
@@ -201,7 +212,12 @@ export function HostSetupForm({
                 <label>
                   شهادة TLS
                   <span className="path-picker">
-                    <input value={cert} readOnly dir="ltr" />
+                    <input
+                      value={cert}
+                      readOnly
+                      dir="ltr"
+                      placeholder="اختر ملف الشهادة (.pem أو .crt)"
+                    />
                     <button
                       type="button"
                       aria-label="اختيار شهادة TLS"
@@ -215,7 +231,12 @@ export function HostSetupForm({
                 <label>
                   المفتاح الخاص للشهادة
                   <span className="path-picker">
-                    <input value={key} readOnly dir="ltr" />
+                    <input
+                      value={key}
+                      readOnly
+                      dir="ltr"
+                      placeholder="اختر ملف المفتاح الخاص (.pem أو .key)"
+                    />
                     <button
                       type="button"
                       aria-label="اختيار المفتاح الخاص للشهادة"
@@ -261,6 +282,7 @@ export function HostSetupForm({
                   maxLength={64}
                   required
                   autoComplete="off"
+                  placeholder="الصق مفتاح المزامنة من مسؤول SARAF"
                 />
               </label>
             )}

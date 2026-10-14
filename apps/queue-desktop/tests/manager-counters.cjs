@@ -49,6 +49,34 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.getByLabel('عنوان خدمة الفرع').fill(fixture.url);
     await page.getByLabel('مفتاح الجهاز', { exact: true }).fill(fixture.manager.token);
     await page.getByRole('button', { name: 'اتصال', exact: true }).click();
+    // Required fields explain the expected value and block invalid saves before IPC.
+    await page.getByRole('button', { name: 'الإعدادات', exact: true }).click();
+    const servicesBefore = (await page.evaluate(() => window.queue.snapshot())).services;
+    await page.getByRole('button', { name: 'إضافة خدمة', exact: true }).click();
+    await page.getByLabel('اسم الخدمة', { exact: true }).last().fill('خدمة اختبار النموذج');
+    const prefix = page.getByLabel('بادئة الرقم', { exact: true }).last();
+    await expect(prefix).toHaveAttribute('placeholder', 'مثال: A');
+    await page.getByRole('button', { name: 'حفظ إعدادات الفرع', exact: true }).click();
+    await expect(page.locator('.form-validation')).toContainText('أكمل حقل «بادئة الرقم»');
+    await expect(prefix).toBeFocused();
+    expect((await page.evaluate(() => window.queue.snapshot())).services).toEqual(servicesBefore);
+    await prefix.fill('A1');
+    await page.getByRole('button', { name: 'حفظ إعدادات الفرع', exact: true }).click();
+    await expect(page.locator('.form-validation')).toContainText('دون أرقام أو مسافات');
+    await prefix.fill('Q');
+    await expect(page.locator('.form-validation')).toHaveCount(0);
+    for (const width of [1280, 760]) {
+      await page.setViewportSize({ width, height: 1000 });
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
+    await fs.mkdir(path.join(root, 'test-results'), { recursive: true });
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.locator('.panel-content').evaluate(element => {
+      element.scrollTop = 0;
+    });
+    await page.screenshot({ path: path.join(root, 'test-results/manager-form-guidance.png') });
     await page.getByRole('button', { name: 'الكاونترات', exact: true }).click();
     await expect(page.locator('.counter-card')).toHaveCount(1);
     await page.getByRole('button', { name: 'إنشاء كاونتر', exact: true }).click();

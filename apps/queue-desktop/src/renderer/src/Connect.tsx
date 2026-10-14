@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Xmark, User, Printer, Settings, Server, Tv } from 'iconoir-react';
 import type { DeviceMode } from '../../setup-contract';
 import { HostSetupForm } from './HostSetupForm';
+import { Form } from './Form';
 
 const choices = [
   {
@@ -44,7 +45,7 @@ export function Connect({
   onConnected: () => Promise<void>;
 }) {
   const [mode, setMode] = useState<DeviceMode | 'server' | null>(null);
-  const [url, setUrl] = useState('http://127.0.0.1:4318'),
+  const [url, setUrl] = useState(''),
     [key, setKey] = useState('');
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
@@ -116,7 +117,7 @@ export function Connect({
               >
                 استيراد ملف الاقتران
               </button>
-              <form
+              <Form
                 aria-busy={busy}
                 onSubmit={e => {
                   e.preventDefault();
@@ -129,6 +130,9 @@ export function Connect({
                 <label>
                   عنوان خدمة الفرع
                   <input
+                    aria-label="عنوان خدمة الفرع"
+                    aria-describedby="device-url-help"
+                    placeholder="https://branch-server:4318"
                     value={url}
                     disabled={busy}
                     onChange={e => setUrl(e.target.value)}
@@ -137,10 +141,19 @@ export function Connect({
                     type="url"
                     autoComplete="off"
                   />
+                  <small id="device-url-help">
+                    انسخ عنوان خادم الفرع من المدير. استخدم 127.0.0.1 فقط إذا كان الخادم على هذا
+                    الكمبيوتر.
+                  </small>
                 </label>
                 <label>
                   مفتاح الجهاز
                   <input
+                    aria-label="مفتاح الجهاز"
+                    aria-describedby="device-key-help"
+                    placeholder="الصق المفتاح الذي أصدره مدير الفرع"
+                    pattern="[a-f0-9]{64}"
+                    title="الصق مفتاح الجهاز كاملًا: 64 حرفًا ورقمًا، أو استورد ملف الاقتران."
                     value={key}
                     disabled={busy}
                     onChange={e => setKey(e.target.value)}
@@ -151,11 +164,14 @@ export function Connect({
                     minLength={64}
                     maxLength={64}
                   />
+                  <small id="device-key-help">
+                    استيراد ملف الاقتران يملأ العنوان والمفتاح تلقائيًا.
+                  </small>
                 </label>
                 <button className="primary" disabled={busy}>
                   {busy ? 'جارٍ الاتصال…' : 'اتصال'}
                 </button>
-              </form>
+              </Form>
               <small>
                 يصدر المدير المفتاح من «الإعدادات ← إنشاء وربط الأجهزة». لأول جهاز في الفرع، اختر
                 «تغيير الاستخدام ← خادم الفرع» أولًا. عنوان 127.0.0.1 يعمل على كمبيوتر الخادم فقط؛

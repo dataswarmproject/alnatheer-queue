@@ -1,7 +1,7 @@
 {
   "name": "@saraf/queue-desktop",
   "productName": "Alnatheer Queue",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Alnatheer branch queue desktop and teller dock",
   "author": "Alnatheer",
   "private": true,

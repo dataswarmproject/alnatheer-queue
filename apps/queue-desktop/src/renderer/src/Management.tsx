@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Service, Role } from '@saraf/queue-core';
 import type { QueueController } from './useQueue';
 import { Plus, Xmark } from 'iconoir-react';
+import { Form } from './Form';
 const roleNames: Record<Role, string> = {
   manager: 'مدير الفرع',
   teller: 'موظف كاونتر',
@@ -39,7 +40,7 @@ export function Management({
   return (
     <section className="management">
       <h2>خدمات الفرع</h2>
-      <form
+      <Form
         onSubmit={async e => {
           e.preventDefault();
           setBusy(true);
@@ -81,15 +82,18 @@ export function Management({
                 maxLength={50}
                 value={firstCounterName}
                 onChange={e => setFirstCounterName(e.target.value)}
+                placeholder="مثال: الحوالات"
               />
             </label>
           </section>
         )}
         {services.map((s, i) => (
-          <div className="config-row" key={s.id}>
+          <div className="config-row service-editor" key={s.id}>
             <label>
               اسم الخدمة
               <input
+                aria-label="اسم الخدمة"
+                placeholder="مثال: بيع وشراء العملات"
                 required
                 maxLength={80}
                 value={s.name}
@@ -103,6 +107,8 @@ export function Management({
             <label>
               اسم الخدمة بالإنجليزية · اختياري
               <input
+                aria-label="اسم الخدمة بالإنجليزية · اختياري"
+                placeholder="e.g. Currency exchange"
                 maxLength={80}
                 dir="ltr"
                 value={s.nameEn ?? ''}
@@ -118,6 +124,10 @@ export function Management({
             <label>
               بادئة الرقم
               <input
+                aria-label="بادئة الرقم"
+                aria-describedby={`prefix-help-${s.id}`}
+                placeholder="مثال: A"
+                title="استخدم حرفًا إلى ثلاثة أحرف إنجليزية، مثل A أو FX، دون أرقام أو مسافات."
                 required
                 pattern="[A-Z]{1,3}"
                 maxLength={3}
@@ -132,6 +142,15 @@ export function Management({
                   )
                 }
               />
+              <small id={`prefix-help-${s.id}`}>
+                {queue.snapshot!.services.some(n => n.id === s.id) ? (
+                  'ثابتة بعد الحفظ للحفاظ على أرقام التذاكر.'
+                ) : (
+                  <>
+                    1–3 أحرف إنجليزية: <bdi dir="ltr">A → A-23</bdi>. اختر بادئة مختلفة لكل خدمة.
+                  </>
+                )}
+              </small>
             </label>
             <label className="checkbox">
               <input
@@ -171,14 +190,14 @@ export function Management({
             حفظ إعدادات الفرع
           </button>
         </div>
-      </form>
+      </Form>
       <h2>إنشاء وربط الأجهزة</h2>
       <p>
         ثبّت التطبيق نفسه على جهاز الموظف أو الكشك أو الشاشة، ثم اختر الدور واستورد ملف الاقتران.
         الكشك يضبط طابعته من إعدادات الجهاز. شاشة العرض المتصلة بكمبيوتر المدير عبر HDMI يُدار من
         تبويب شاشات العرض.
       </p>
-      <form
+      <Form
         onSubmit={async e => {
           e.preventDefault();
           setBusy(true);
@@ -231,6 +250,14 @@ export function Management({
           <label>
             اسم الموظف / الجهاز
             <input
+              aria-label="اسم الموظف / الجهاز"
+              placeholder={
+                role === 'teller'
+                  ? 'مثال: أحمد محمد'
+                  : role === 'kiosk'
+                    ? 'مثال: كشك المدخل'
+                    : 'مثال: شاشة الانتظار'
+              }
               required={role === 'teller'}
               value={name}
               maxLength={80}
@@ -241,17 +268,23 @@ export function Management({
             <label>
               معرّف الموظف
               <input
+                aria-label="معرّف الموظف"
+                aria-describedby="staff-ref-help"
+                placeholder="مثال: EMP-001"
                 required
                 value={staffRef}
                 maxLength={80}
                 dir="ltr"
                 onChange={e => setStaffRef(e.target.value)}
               />
+              <small id="staff-ref-help">
+                الرقم الوظيفي من سجل الموظفين، ويُستخدم لربط تقارير الأداء.
+              </small>
             </label>
           )}
         </div>
         <button disabled={busy || !queue.online}>إصدار مفتاح جهاز</button>
-      </form>
+      </Form>
       {key && (
         <div className="pairing">
           <strong>مفتاح الاقتران · احفظه في الجهاز المطلوب</strong>

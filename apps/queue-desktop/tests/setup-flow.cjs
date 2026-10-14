@@ -24,6 +24,16 @@ const { createServer } = require('node:net');
     await page.getByRole('button', { name: 'شاشات العرض', exact: false }).click();
     await expect(page.getByText('وصّل شاشة العرض بهذا الكمبيوتر عبر HDMI')).toBeVisible();
     await expect(page.getByLabel('عنوان خدمة الفرع')).toBeVisible();
+    await expect(page.getByLabel('عنوان خدمة الفرع')).toHaveValue('');
+    await page.getByRole('button', { name: 'اتصال', exact: true }).click();
+    await expect(page.locator('.form-validation')).toContainText('عنوان خدمة الفرع');
+    await expect(page.locator('.form-validation')).toContainText('مفتاح الجهاز');
+    await expect(page.getByLabel('عنوان خدمة الفرع')).toBeFocused();
+    await page.getByLabel('عنوان خدمة الفرع').fill('not-an-address');
+    await page.getByLabel('مفتاح الجهاز', { exact: true }).fill('short');
+    await page.getByRole('button', { name: 'اتصال', exact: true }).click();
+    await expect(page.locator('.form-validation')).toContainText('عنوانًا كاملًا');
+    await expect(page.locator('.form-validation')).toContainText('64');
     await page.getByRole('button', { name: 'تغيير الاستخدام', exact: true }).click();
     await page.getByRole('button', { name: 'خادم الفرع', exact: false }).click();
     const setupInfo = await page.evaluate(() => window.queue.hostSetupInfo());
@@ -153,6 +163,15 @@ const { createServer } = require('node:net');
     expect(errors).toEqual([]);
     await fs.mkdir(path.join(root, 'test-results'), { recursive: true });
     await restarted.screenshot({ path: path.join(root, 'test-results/hdmi-setup.png') });
+    await restarted.getByRole('button', { name: 'الإعدادات', exact: true }).click();
+    await restarted.getByRole('button', { name: 'إضافة خدمة', exact: true }).click();
+    await restarted.setViewportSize({ width: 1280, height: 1000 });
+    await restarted.locator('.panel-content').evaluate(element => {
+      element.scrollTop = 0;
+    });
+    await restarted.screenshot({
+      path: path.join(root, 'test-results/manager-empty-form-guidance.png'),
+    });
     console.log(
       'First-run wizard passed: real database provisioning, encrypted configuration, occupied-folder preservation, independent server lifetime and restart, manager HDMI controls and primary-screen protection.',
     );

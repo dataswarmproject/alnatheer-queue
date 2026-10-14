@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { businessDay } from '@saraf/queue-core';
+import { Form } from './Form';
 const labels: Record<string, string> = {
   issue: 'إصدار تذكرة',
   printed: 'قبول التذكرة في الطابعة',
@@ -22,7 +23,7 @@ export function Journey() {
     <section>
       <h2>متابعة التذكرة</h2>
       <p>ابحث برقم التذكرة وتاريخ إصدارها لمعرفة النداءات والتحويلات والموظف المسند لكل خطوة.</p>
-      <form
+      <Form
         className="filters"
         onSubmit={async e => {
           e.preventDefault();
@@ -40,6 +41,8 @@ export function Journey() {
             dir="ltr"
             required
             pattern="[A-Z]{1,3}-[0-9]{1,12}"
+            placeholder="مثال: A-023"
+            title="انسخ رقم التذكرة كاملًا مع الحرف والشرطة، مثل A-023."
             value={code}
             onChange={e => setCode(e.target.value.toUpperCase())}
           />
@@ -49,7 +52,7 @@ export function Journey() {
           <input required type="date" value={day} onChange={e => setDay(e.target.value)} />
         </label>
         <button>بحث</button>
-      </form>
+      </Form>
       {error && (
         <p className="error" role="alert">
           {error}

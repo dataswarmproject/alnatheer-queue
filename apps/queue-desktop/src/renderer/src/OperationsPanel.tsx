@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { OperationsStatus, Operation, OperationResult } from '@saraf/queue-core/operations';
+import { Form } from './Form';
 
 export function OperationsPanel({ refreshServer }: { refreshServer: () => Promise<void> }) {
   const [status, setStatus] = useState<OperationsStatus | null>(null),
@@ -59,7 +60,7 @@ export function OperationsPanel({ refreshServer }: { refreshServer: () => Promis
           <div className="operations-grid">
             <section className="geist-card">
               <h3>ربط SARAF الرئيسي</h3>
-              <form
+              <Form
                 onSubmit={async e => {
                   e.preventDefault();
                   setBusy(true);
@@ -88,6 +89,7 @@ export function OperationsPanel({ refreshServer }: { refreshServer: () => Promis
               >
                 <label className="checkbox">
                   <input
+                    placeholder="https://saraf.example/api/queue/sync"
                     type="checkbox"
                     disabled={busy}
                     checked={syncEnabled}
@@ -98,6 +100,12 @@ export function OperationsPanel({ refreshServer }: { refreshServer: () => Promis
                 <label>
                   عنوان استقبال المزامنة
                   <input
+                    placeholder={
+                      status.settings.hasSyncKey
+                        ? 'اتركه فارغًا للاحتفاظ بالمفتاح الحالي'
+                        : 'الصق مفتاح المزامنة من مسؤول SARAF'
+                    }
+                    title="مفتاح المزامنة يتكون من 64 حرفًا ورقمًا. انسخه كاملًا من مسؤول SARAF."
                     dir="ltr"
                     type="url"
                     maxLength={500}
@@ -152,7 +160,7 @@ export function OperationsPanel({ refreshServer }: { refreshServer: () => Promis
                     مزامنة الآن
                   </button>
                 </div>
-              </form>
+              </Form>
             </section>
             <section className="geist-card">
               <h3>سلامة قاعدة الفرع</h3>

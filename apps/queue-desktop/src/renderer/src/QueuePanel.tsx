@@ -3,6 +3,7 @@ import type { QueueController } from './useQueue';
 import { Printer, Star } from 'iconoir-react';
 import { Announcements } from './Announcements';
 import { TellerActions } from './TellerActions';
+import { Form } from './Form';
 
 export function QueuePanel({
   queue,
@@ -77,7 +78,7 @@ export function QueuePanel({
         </>
       )}
       {transfer && ticket && (
-        <form
+        <Form
           className="transfer-form"
           onSubmit={async e => {
             e.preventDefault();
@@ -109,7 +110,7 @@ export function QueuePanel({
               إلغاء
             </button>
           </div>
-        </form>
+        </Form>
       )}
       {canIssue && (
         <section>

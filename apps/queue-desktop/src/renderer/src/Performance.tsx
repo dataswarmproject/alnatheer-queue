@@ -66,7 +66,8 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
             max={1440}
             value={sla}
             onChange={e => setSla(e.target.value)}
-            placeholder="اختياري"
+            placeholder="مثال: 5 · اختياري"
+            title="هدف الانتظار من دقيقة واحدة إلى 1440 دقيقة. اتركه فارغًا لعرض الأداء دون هدف انتظار."
           />
         </label>
         <button onClick={() => void load()} disabled={busy}>
