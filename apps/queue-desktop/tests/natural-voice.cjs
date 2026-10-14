@@ -56,6 +56,18 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     if (!fixture) throw new Error('Fixture timed out');
     const profile = path.join(directory, 'display');
     await fs.mkdir(profile);
+    // Voice qualification explicitly opts in; production displays start muted.
+    await fs.writeFile(
+      path.join(profile, 'announcement-settings.json'),
+      JSON.stringify({
+        enabled: true,
+        voiceEnabled: true,
+        alertEnabled: true,
+        mode: 'auto',
+        voiceURI: '',
+        volume: 1,
+      }),
+    );
     app = await electron.launch({
       executablePath: require('electron'),
       args: [root],

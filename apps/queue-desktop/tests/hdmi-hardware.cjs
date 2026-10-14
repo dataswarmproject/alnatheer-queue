@@ -83,6 +83,18 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     });
     const profile = path.join(directory, 'manager');
     await fs.mkdir(profile);
+    // Voice qualification explicitly opts in; production displays start muted.
+    await fs.writeFile(
+      path.join(profile, 'announcement-settings.json'),
+      JSON.stringify({
+        enabled: true,
+        voiceEnabled: true,
+        alertEnabled: true,
+        mode: 'auto',
+        voiceURI: '',
+        volume: 1,
+      }),
+    );
     app = await electron.launch({
       executablePath: require('electron'),
       args: [root],

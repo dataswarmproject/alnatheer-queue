@@ -1,10 +1,13 @@
 import { it, expect } from 'vitest';
-import { audioSettingsSchema } from '../../../apps/queue-desktop/src/audio-contract';
+import {
+  audioSettingsSchema,
+  defaultAudioSettings,
+} from '../../../apps/queue-desktop/src/audio-contract';
 it('migrates legacy saved settings without unmuting a disabled display and retains independent channel choices', () => {
   const legacy = { enabled: false, mode: 'auto', voiceURI: '', volume: 0.7 };
   expect(audioSettingsSchema.parse(legacy)).toEqual({
     ...legacy,
-    voiceEnabled: true,
+    voiceEnabled: false,
     alertEnabled: true,
   });
   for (const [voiceEnabled, alertEnabled] of [
@@ -16,4 +19,9 @@ it('migrates legacy saved settings without unmuting a disabled display and retai
     const saved = { ...legacy, enabled: true, voiceEnabled, alertEnabled };
     expect(audioSettingsSchema.parse(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
   }
+});
+it('starts new displays with voice off and alert sound on until voice quality is approved', () => {
+  expect(defaultAudioSettings.voiceEnabled).toBe(false);
+  expect(defaultAudioSettings.alertEnabled).toBe(true);
+  expect(defaultAudioSettings.enabled).toBe(true);
 });

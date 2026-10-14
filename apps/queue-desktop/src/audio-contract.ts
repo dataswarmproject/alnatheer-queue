@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const audioSettingsSchema = z
   .object({
     enabled: z.boolean(),
-    voiceEnabled: z.boolean().default(true),
+    voiceEnabled: z.boolean().default(false),
     alertEnabled: z.boolean().default(true),
     mode: z.enum(['auto', 'natural', 'local']),
     voiceURI: z.string().max(500),
@@ -13,7 +13,7 @@ export const audioSettingsSchema = z
 export type AudioSettings = z.infer<typeof audioSettingsSchema>;
 export const defaultAudioSettings: AudioSettings = {
   enabled: true,
-  voiceEnabled: true,
+  voiceEnabled: false,
   alertEnabled: true,
   mode: 'auto',
   voiceURI: '',
