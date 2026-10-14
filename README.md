@@ -20,6 +20,8 @@ SARAF serves `/api/queue/updates` using a server-only fine-grained GitHub token 
 
 A Windows code-signing certificate is not configured. Signed release manifests provide application-level release verification; initial Windows installation can still show an unknown publisher. Upgrades preserve existing branch databases and settings and require a verified backup and no open tickets. Teller/kiosk PCs currently install the release separately.
 
+The initial 0.4.1 installer was built and qualified locally. GitHub reported that the account's Actions budget prevented the hosted jobs from starting. Automatic future builds require resolving that account setting or configuring an authorized self-hosted runner; no billing setting was changed. Existing 0.4.0 evaluation installs require manually installing 0.4.1 once to bootstrap this signed-manifest update path.
+
 ## Scope of qualification
 
 Local tests cover ticket printing acceptance/retry, FIFO bounds, six counters, Riyadh midnight reset, backups into separate databases, synchronization recovery, reports, Arabic voice/alert channels, display lifecycle and session persistence. Windows spool acceptance is not physical paper confirmation. Actual thermal printer qualification awaits its model; separate LAN PCs and live HQ upgrades must be qualified at deployment. Annual subscription licensing has not been implemented.

@@ -83,7 +83,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create $env:GITHUB_REF_NAME apps/queue-desktop/release/alnatheer-queue-*-windows-x64.exe apps/queue-desktop/release/queue-release.json --verify-tag --title "Alnatheer Queue $env:GITHUB_REF_NAME" --generate-notes
+          $manifestPath = 'apps/queue-desktop/release/queue-release.json'
+          $releaseManifest = Get-Content $manifestPath | ConvertFrom-Json
+          $installerPath = Join-Path 'apps/queue-desktop/release' $releaseManifest.payload.fileName
+          if (!(Test-Path -LiteralPath $installerPath)) { throw 'Verified installer unavailable' }
+          gh release create $env:GITHUB_REF_NAME $installerPath $manifestPath --verify-tag --title "Alnatheer Queue $env:GITHUB_REF_NAME" --generate-notes
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
       - uses: actions/upload-artifact@v4
         if: always()
