@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { id, type Snapshot } from '@saraf/queue-core';
+import type { Snapshot } from '@saraf/queue-core';
 
 export const deviceModeSchema = z.enum([
   'teller',
@@ -23,7 +23,8 @@ export function assertDeviceMode(mode: DeviceMode | undefined, snapshot: Snapsho
 }
 export const hostSetupSchema = z
   .object({
-    branchId: id,
+    branchId: z.string().uuid('أدخل معرّف الفرع UUID من SARAF، أو أنشئ معرّفًا لتجربة محلية فقط.'),
+    localEvaluation: z.boolean().default(false),
     directory: z.string().min(1).max(500),
     port: z.number().int().min(1024).max(65535),
     host: z.string().min(1).max(200),
@@ -42,7 +43,15 @@ export const hostSetupSchema = z
       .optional(),
     speechApiKey: z.string().min(10).max(300).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((settings, context) => {
+    if (settings.localEvaluation && (settings.syncUrl || settings.syncKey))
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['syncUrl'],
+        message: 'معرّف التجربة المحلية لا يُستخدم لمزامنة SARAF. استخدم معرّف الفرع الحقيقي.',
+      });
+  });
 export type HostSetup = z.infer<typeof hostSetupSchema>;
 export type HostSetupInfo = {
   directory: string;

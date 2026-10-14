@@ -7,6 +7,7 @@
     "typecheck": "tsc --noEmit"
   },
   "exports": {
+    "./network-trust": "./src/network-trust.ts",
     "./update-release": "./src/update-release.ts",
     "./github-release-broker": "./src/github-release-broker.ts",
     "./release-trust": "./src/release-trust.ts",

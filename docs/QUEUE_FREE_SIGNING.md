@@ -6,7 +6,7 @@ The private proprietary repository does not qualify for SignPath Foundation's op
 
 ## 1. Create or reuse the free signing identity
 
-Use one protected Windows signing account on an existing Digital Trendz PC. Obtain the private queue source and prerequisites: Node 22.16+, pnpm 10.26.2, Git, and GitHub CLI. The following paths assume the existing checkout at `E:\projects\alnatheer-queue`.
+Use one protected Windows signing account on an existing Digital Trendz PC. Obtain the private queue source and prerequisites: Node 22.19+, pnpm 10.26.2, Git, and GitHub CLI. The following paths assume the existing checkout at `E:\projects\alnatheer-queue`.
 
 ```powershell
 cd E:\projects\alnatheer-queue

@@ -5,7 +5,9 @@ import { id } from '@saraf/queue-core';
 import { createOperations } from './operations';
 import { NeuralSpeech, speechModelSchema } from './speech';
 import { localSpeechConfiguration } from './local-speech-config';
+import { useWindowsNetworkTrust } from '@saraf/queue-core/network-trust';
 
+useWindowsNetworkTrust();
 const branchId = id.parse(process.env.QUEUE_BRANCH_ID);
 const directory = path.resolve(process.env.QUEUE_DATA_DIR ?? './queue-data');
 const speechDirectory =

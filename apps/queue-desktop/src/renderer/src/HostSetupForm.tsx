@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { HostSetupInfo } from '../../setup-contract';
+import { hostSetupSchema, type HostSetupInfo } from '../../setup-contract';
 
 export function HostSetupForm({
   onConnected,
@@ -11,6 +11,7 @@ export function HostSetupForm({
   const [info, setInfo] = useState<HostSetupInfo | null>(null),
     [directory, setDirectory] = useState('');
   const [branchId, setBranchId] = useState(''),
+    [localEvaluation, setLocalEvaluation] = useState(false),
     [port, setPort] = useState(4318),
     [host, setHost] = useState('127.0.0.1');
   const [url, setUrl] = useState(''),
@@ -81,12 +82,14 @@ export function HostSetupForm({
         </button>
       ) : (
         <form
+          noValidate
           aria-busy={busy}
           onSubmit={e => {
             e.preventDefault();
             void run(async () => {
-              await window.queue.createHost({
+              const parsed = hostSetupSchema.safeParse({
                 branchId,
+                localEvaluation,
                 directory,
                 port,
                 host,
@@ -98,6 +101,8 @@ export function HostSetupForm({
                   ? { speechVoiceId, ...(speechApiKey ? { speechApiKey } : {}) }
                   : {}),
               });
+              if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+              await window.queue.createHost(parsed.data);
               setSyncKey('');
               setSpeechApiKey('');
               await onConnected();
@@ -108,13 +113,39 @@ export function HostSetupForm({
             معرّف الفرع في SARAF
             <input
               value={branchId}
-              onChange={e => setBranchId(e.target.value.trim())}
+              onChange={e => {
+                setBranchId(e.target.value.trim());
+                setLocalEvaluation(false);
+              }}
               disabled={busy}
               required
               dir="ltr"
               placeholder="UUID"
+              aria-describedby="branch-id-help"
             />
           </label>
+          <small id="branch-id-help">
+            يوفّره مسؤول SARAF من سجل الفرع. ليس اسم الفرع أو مفتاح الجهاز. لا تغيّر معرّف قاعدة
+            موجودة.
+          </small>
+          <button
+            type="button"
+            disabled={busy || !!syncUrl}
+            onClick={() => {
+              setBranchId(crypto.randomUUID());
+              setLocalEvaluation(true);
+              setSyncKey('');
+              setError('');
+            }}
+          >
+            إنشاء معرّف لتجربة محلية فقط
+          </button>
+          {localEvaluation && (
+            <p role="status">
+              تجربة محلية مستقلة بدون مزامنة SARAF. للإنتاج، استخدم معرّف الفرع الحقيقي قبل إنشاء
+              قاعدة البيانات.
+            </p>
+          )}
           <label>
             مجلد بيانات الفرع
             <input value={directory} readOnly dir="ltr" />
@@ -139,7 +170,7 @@ export function HostSetupForm({
                 <option value="127.0.0.1">هذا الكمبيوتر فقط</option>
                 {info?.addresses.map(address => (
                   <option key={address} value={address}>
-                    شبكة الفرع · {address}
+                    شبكة محلية أو VPN · {address}
                   </option>
                 ))}
               </select>
@@ -178,8 +209,9 @@ export function HostSetupForm({
                 </button>
                 <small dir="ltr">{key}</small>
                 <p>
-                  يلزم اعتماد الشهادة وفتح المنفذ لشبكة الفرع في Windows. اطلب من مسؤول التقنية
-                  إكمالهما.
+                  اختر عنوانًا ثابتًا يمكن لأجهزة الفرع الوصول إليه عبر LAN أو VPN. يجب أن تطابق
+                  شهادة TLS اسم الخادم وأن تثق بها الأجهزة. يضبط مسؤول التقنية المسار وDNS وفتح
+                  المنفذ للشبكة المصرّح بها فقط.
                 </p>
               </>
             )}
@@ -188,12 +220,16 @@ export function HostSetupForm({
               <input
                 type="url"
                 value={syncUrl}
-                disabled={busy}
+                disabled={busy || localEvaluation}
                 onChange={e => setSyncUrl(e.target.value)}
                 dir="ltr"
                 placeholder="https://saraf.example/api/queue/sync"
               />
             </label>
+            <small>
+              تبقى قاعدة الفرع محلية. عند انقطاع VPN إلى SARAF تستمر أجهزة LAN وتُعاد محاولة
+              المزامنة تلقائيًا. يحتاج الجهاز المتصل عبر VPN إلى اتصال فعّال بخادم الفرع.
+            </small>
             {syncUrl && (
               <label>
                 مفتاح مزامنة الفرع

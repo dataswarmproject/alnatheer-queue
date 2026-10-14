@@ -58,7 +58,9 @@ import {
 import { createUpdates } from './updates';
 import { updateActionSchema } from '../update-contract';
 import { saveTvLayout, restoreTvLayout } from './tv-layout';
+import { useWindowsNetworkTrust } from '@saraf/queue-core/network-trust';
 
+useWindowsNetworkTrust();
 protocol.registerSchemesAsPrivileged([
   { scheme: 'queue', privileges: { standard: true, secure: true, supportFetchAPI: true } },
 ]);

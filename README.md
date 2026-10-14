@@ -1,12 +1,12 @@
 # Alnatheer Queue · إدارة الانتظار
 
-Private Windows desktop suite owned by Alnatheer Exchange. The repository contains the branch service, manager, teller dock, ticket kiosk, waiting display and counter display. See [the branch manager guide](docs/QUEUE_BRANCH_MANAGER.md).
+Private Windows desktop suite owned by Alnatheer Exchange. The repository contains the branch service, manager, teller dock, ticket kiosk, waiting display and counter display. See [the branch manager guide](docs/QUEUE_BRANCH_MANAGER.md) and [the Arabic IT setup and LAN/VPN guide](docs/QUEUE_IT_SETUP_AR.md).
 
 Each branch owns an independent PGlite/PostgreSQL database. Teller and kiosk PCs connect to the branch host over trusted HTTPS on the LAN. The manager drives the customer display over HDMI. Only the branch host synchronizes with SARAF headquarters; WAN outages do not stop branch queue service.
 
 ## Development
 
-Use Node 22.16+ and pnpm 10.26.2. Run `pnpm install --frozen-lockfile`, `pnpm typecheck` and `pnpm test`. On Windows, set `QUEUE_FONT_ARCHIVE` to the owner-supplied Thmanyah archive. Set `QUEUE_VOICE_LIBRARY_DIRECTORY` to the verified free Arabic voice bundle before `pnpm package:win`. Operational databases, pairing keys, raw fonts and release private keys are excluded from Git.
+Use Node 22.19+ and pnpm 10.26.2. Run `pnpm install --frozen-lockfile`, `pnpm typecheck` and `pnpm test`. On Windows, set `QUEUE_FONT_ARCHIVE` to the owner-supplied Thmanyah archive. Set `QUEUE_VOICE_LIBRARY_DIRECTORY` to the verified free Arabic voice bundle before `pnpm package:win`. Operational databases, pairing keys, raw fonts and release private keys are excluded from Git.
 
 The installer asks which role the PC will use. Set up one branch host, configure real services/counters and issue separate pairing files for each teller and kiosk. Use **شاشات العرض** on the manager for display selection and independent voice/alert settings. Setup, encrypted connections and preferences persist across restarts. A new branch has no fabricated operational records.
 

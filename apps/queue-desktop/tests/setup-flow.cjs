@@ -38,8 +38,16 @@ const { createServer } = require('node:net');
     await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
     const port = reservation.address().port;
     await new Promise(resolve => reservation.close(resolve));
-    await page.getByLabel('معرّف الفرع في SARAF').fill(crypto.randomUUID());
+    await page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('أدخل معرّف الفرع');
+    await page.getByLabel('معرّف الفرع في SARAF').fill('not-a-uuid');
+    await page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('UUID');
+    await page.getByRole('button', { name: 'إنشاء معرّف لتجربة محلية فقط' }).click();
+    const generatedId = await page.getByLabel('معرّف الفرع في SARAF').inputValue();
+    expect(generatedId).toMatch(/^[a-f0-9-]{36}$/);
     await page.getByText('اتصال أجهزة الفرع والمركز', { exact: true }).click();
+    await expect(page.getByLabel('عنوان مزامنة SARAF · اختياري')).toBeDisabled();
     await page.getByLabel('منفذ الخادم').fill(String(port));
     // The wizard never replaces an occupied folder, including a real-looking old database.
     const occupied = path.join(directory, 'occupied');
@@ -65,6 +73,7 @@ const { createServer } = require('node:net');
       timeout: 60000,
     });
     const snapshot = await page.evaluate(() => window.queue.snapshot());
+    expect(snapshot.branchId).toBe(generatedId);
     if (setupInfo.localVoiceAvailable) {
       const voice = JSON.parse(
         await fs.readFile(path.join(serverFolder, 'speech-cache/voice-library.json'), 'utf8'),
