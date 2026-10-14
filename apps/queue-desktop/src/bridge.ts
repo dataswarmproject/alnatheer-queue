@@ -40,6 +40,8 @@ export interface QueueBridge {
   savePairing(): Promise<boolean>;
   hostSetupInfo(): Promise<HostSetupInfo>;
   chooseSetupPath(kind: 'directory' | 'cert' | 'key'): Promise<string | null>;
+  canBrowseHostFolders(): Promise<boolean>;
+  browseHostFolder(kind: 'database' | 'backup' | 'report'): Promise<void>;
   createHost(input: HostSetup): Promise<void>;
   resumeHost(): Promise<void>;
   tvStatus(): Promise<TvStatus>;

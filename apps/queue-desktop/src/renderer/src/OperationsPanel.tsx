@@ -9,6 +9,7 @@ export function OperationsPanel({ refreshServer }: { refreshServer: () => Promis
     [dailyBackups, setDailyBackups] = useState(true),
     [dailyReports, setDailyReports] = useState(true);
   const [busy, setBusy] = useState(false),
+    [canBrowse, setCanBrowse] = useState(false),
     [error, setError] = useState(''),
     [result, setResult] = useState<OperationResult | null>(null),
     [restore, setRestore] = useState<string | null>(null);
@@ -19,6 +20,18 @@ export function OperationsPanel({ refreshServer }: { refreshServer: () => Promis
     setSyncUrl(value.settings.syncUrl);
     setDailyBackups(value.settings.dailyBackups);
     setDailyReports(value.settings.dailyReports);
+    setCanBrowse(await window.queue.canBrowseHostFolders().catch(() => false));
+  };
+  const browse = async (kind: 'database' | 'backup' | 'report') => {
+    setBusy(true);
+    setError('');
+    try {
+      await window.queue.browseHostFolder(kind);
+    } catch {
+      setError('تعذر فتح مجلد الخادم.');
+    } finally {
+      setBusy(false);
+    }
   };
   useEffect(() => {
     void refresh().catch(() => setError('حدّث خادم الفرع لتفعيل أدوات قاعدة البيانات والمزامنة.'));
@@ -147,14 +160,41 @@ export function OperationsPanel({ refreshServer }: { refreshServer: () => Promis
                 <div>
                   <dt>قاعدة الخدمة</dt>
                   <dd dir="ltr">{status.databaseDirectory}</dd>
+                  {canBrowse && (
+                    <button
+                      disabled={busy}
+                      aria-label="فتح مجلد قاعدة البيانات"
+                      onClick={() => void browse('database')}
+                    >
+                      استعراض
+                    </button>
+                  )}
                 </div>
                 <div>
                   <dt>النسخ الاحتياطية</dt>
                   <dd dir="ltr">{status.backupDirectory}</dd>
+                  {canBrowse && (
+                    <button
+                      disabled={busy}
+                      aria-label="فتح مجلد النسخ الاحتياطية"
+                      onClick={() => void browse('backup')}
+                    >
+                      استعراض
+                    </button>
+                  )}
                 </div>
                 <div>
                   <dt>التقارير</dt>
                   <dd dir="ltr">{status.reportDirectory}</dd>
+                  {canBrowse && (
+                    <button
+                      disabled={busy}
+                      aria-label="فتح مجلد التقارير"
+                      onClick={() => void browse('report')}
+                    >
+                      استعراض
+                    </button>
+                  )}
                 </div>
               </dl>
               <div className="row">

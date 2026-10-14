@@ -8,6 +8,7 @@ import {
   screen,
   dialog,
   systemPreferences,
+  shell,
 } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -44,6 +45,8 @@ import {
   hostSetupInfo,
   resumeHost,
   startSavedHost,
+  ownsConnectedHost,
+  ownedHostFolder,
 } from './host-setup';
 import { createTvController } from './tv';
 import { speechRequestSchema, speechAudioSchema } from '@saraf/queue-core/speech';
@@ -410,7 +413,20 @@ app.whenReady().then(async () => {
   const requireManager = async () => {
     const snapshot = snapshotSchema.parse(await request('GET', '/v1/snapshot'));
     if (snapshot.actor.role !== 'manager') throw new Error('Branch manager authorization required');
+    return snapshot;
   };
+  handle('queue:can-browse-host-folders', async () => {
+    const snapshot = await requireManager();
+    return ownsConnectedHost(snapshot.branchId);
+  });
+  handle('queue:browse-host-folder', async input => {
+    const kind = z.enum(['database', 'backup', 'report']).parse(input);
+    const snapshot = await requireManager();
+    if (!(await ownsConnectedHost(snapshot.branchId)))
+      throw new Error('استعرض ملفات الخادم من الكمبيوتر الذي يشغّله.');
+    const error = await shell.openPath(await ownedHostFolder(kind));
+    if (error) throw new Error('تعذر فتح مجلد الخادم.');
+  });
   const requireLocalManager = () => {
     if (connectionInfo().role !== 'manager')
       throw new Error('Branch manager authorization required');

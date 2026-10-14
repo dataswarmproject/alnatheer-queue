@@ -66,7 +66,7 @@ export function DisplayAudioSettings() {
           onChange={e => save({ mode: e.target.value as AudioSettings['mode'] })}
         >
           <option value="auto">تلقائي · المكتبة العربية أولًا</option>
-          <option value="natural">صوت طبيعي · النداءات المحفوظة</option>
+          <option value="natural">تسجيلات النداء</option>
           <option value="local">صوت الجهاز</option>
         </select>
       </label>
@@ -131,20 +131,13 @@ export function DisplayAudioSettings() {
               : 'نداء مرئي دون صوت'}
       </p>
       {!runtime && <p role="status">افتح شاشة العرض لقراءة حالة الصوت وإجراء الاختبار.</p>}
-      {runtime?.ready && (
-        <p role="status">
-          {runtime.mode === 'natural'
-            ? 'المكتبة العربية جاهزة · تعمل دون اتصال'
-            : 'صوت الجهاز جاهز'}
-        </p>
-      )}
       {runtime &&
         !runtime.ready &&
         (status?.settings.mode === 'local' || !runtime.natural?.restartRequired) && (
           <p role="status">
             {runtime.mode === 'local'
               ? 'لا يوجد صوت عربي محلي متاح. أضف صوت العربية (السعودية) من إعدادات الكلام في Windows.'
-              : 'مكتبة النداءات غير جاهزة على خادم الفرع.'}
+              : 'النداء الصوتي غير متاح. راجع إعدادات خادم الفرع.'}
           </p>
         )}
       {runtime?.natural?.restartRequired && (

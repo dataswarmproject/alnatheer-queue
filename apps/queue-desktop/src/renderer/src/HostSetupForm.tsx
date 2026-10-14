@@ -22,8 +22,6 @@ export function HostSetupForm({
     [openAtLogin, setOpenAtLogin] = useState(false);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
-  const [speechVoiceId, setSpeechVoiceId] = useState(''),
-    [speechApiKey, setSpeechApiKey] = useState('');
   useEffect(() => {
     let alive = true;
     window.queue
@@ -63,10 +61,7 @@ export function HostSetupForm({
     });
   return (
     <>
-      <p>
-        ثبّت خادمًا واحدًا على كمبيوتر دائم التشغيل لكل فرع. تُنشأ قاعدة فارغة؛ بيانات الفرع الحالية
-        تبقى محفوظة.
-      </p>
+      <p>جهّز خادمًا واحدًا لكل فرع، ثم اربط به أجهزة الموظفين وإصدار التذاكر.</p>
       {info?.configured ? (
         <button
           className="primary"
@@ -97,14 +92,10 @@ export function HostSetupForm({
                 ...(host !== '127.0.0.1' ? { cert, key } : {}),
                 ...(syncUrl ? { syncUrl, syncKey } : {}),
                 openAtLogin,
-                ...(!info?.localVoiceAvailable && speechVoiceId
-                  ? { speechVoiceId, ...(speechApiKey ? { speechApiKey } : {}) }
-                  : {}),
               });
               if (!parsed.success) throw new Error(parsed.error.issues[0].message);
               await window.queue.createHost(parsed.data);
               setSyncKey('');
-              setSpeechApiKey('');
               await onConnected();
             });
           }}
@@ -148,11 +139,18 @@ export function HostSetupForm({
           )}
           <label>
             مجلد بيانات الفرع
-            <input value={directory} readOnly dir="ltr" />
+            <span className="path-picker">
+              <input value={directory} readOnly dir="ltr" />
+              <button
+                type="button"
+                aria-label="اختيار مجلد فارغ"
+                disabled={busy || !info}
+                onClick={() => void pick('directory')}
+              >
+                تصفح…
+              </button>
+            </span>
           </label>
-          <button type="button" disabled={busy || !info} onClick={() => void pick('directory')}>
-            اختيار مجلد فارغ
-          </button>
           <label className="checkbox setup-startup">
             <input
               type="checkbox"
@@ -200,14 +198,34 @@ export function HostSetupForm({
                     placeholder={`https://branch-server:${port}`}
                   />
                 </label>
-                <button type="button" disabled={busy} onClick={() => void pick('cert')}>
-                  اختيار شهادة TLS
-                </button>
-                <small dir="ltr">{cert}</small>
-                <button type="button" disabled={busy} onClick={() => void pick('key')}>
-                  اختيار المفتاح الخاص للشهادة
-                </button>
-                <small dir="ltr">{key}</small>
+                <label>
+                  شهادة TLS
+                  <span className="path-picker">
+                    <input value={cert} readOnly dir="ltr" />
+                    <button
+                      type="button"
+                      aria-label="اختيار شهادة TLS"
+                      disabled={busy}
+                      onClick={() => void pick('cert')}
+                    >
+                      تصفح…
+                    </button>
+                  </span>
+                </label>
+                <label>
+                  المفتاح الخاص للشهادة
+                  <span className="path-picker">
+                    <input value={key} readOnly dir="ltr" />
+                    <button
+                      type="button"
+                      aria-label="اختيار المفتاح الخاص للشهادة"
+                      disabled={busy}
+                      onClick={() => void pick('key')}
+                    >
+                      تصفح…
+                    </button>
+                  </span>
+                </label>
                 <p>
                   اختر عنوانًا ثابتًا يمكن لأجهزة الفرع الوصول إليه عبر LAN أو VPN. يجب أن تطابق
                   شهادة TLS اسم الخادم وأن تثق بها الأجهزة. يضبط مسؤول التقنية المسار وDNS وفتح
@@ -247,48 +265,11 @@ export function HostSetupForm({
               </label>
             )}
           </details>
-          {info?.localVoiceAvailable ? (
-            <p>نداء عربي جاهز يعمل دون اشتراك أو اتصال بالإنترنت.</p>
-          ) : (
-            <details className="setup-advanced">
-              <summary>النداء بصوت عربي طبيعي · اختياري</summary>
-              <p>
-                أدخل معرّف صوت عربي ومفتاح خدمة الصوت. تُحفظ النداءات على الخادم لإعادة استخدامها،
-                ويُحفظ المفتاح مشفرًا على هذا الكمبيوتر.
-              </p>
-              <label>
-                معرّف الصوت
-                <input
-                  value={speechVoiceId}
-                  disabled={busy}
-                  dir="ltr"
-                  onChange={e => setSpeechVoiceId(e.target.value.trim())}
-                  maxLength={80}
-                />
-              </label>
-              <label>
-                مفتاح خدمة الصوت
-                <input
-                  type="password"
-                  value={speechApiKey}
-                  disabled={busy}
-                  dir="ltr"
-                  autoComplete="off"
-                  onChange={e => setSpeechApiKey(e.target.value)}
-                  maxLength={300}
-                />
-              </label>
-              <small>
-                بدون مفتاح، تتاح النداءات المحفوظة فقط. تُنشأ الجمل الجديدة عند توفر الاتصال.
-              </small>
-            </details>
-          )}
           <button className="primary" disabled={busy || !info}>
             {busy ? 'جارٍ إنشاء الخادم…' : 'إنشاء خادم الفرع'}
           </button>
         </form>
       )}
-      {busy && <p role="status">يرجى الانتظار حتى اكتمال الإعداد.</p>}
       {error && (
         <p className="error" role="alert">
           {error}

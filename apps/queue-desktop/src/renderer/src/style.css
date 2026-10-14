@@ -1832,3 +1832,15 @@ textarea:hover {
     font-size: 10px;
   }
 }
+.path-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.path-picker input {
+  flex: 1;
+  min-width: 0;
+}
+.path-picker button {
+  flex-shrink: 0;
+}

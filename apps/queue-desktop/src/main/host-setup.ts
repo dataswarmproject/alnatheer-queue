@@ -168,6 +168,17 @@ export async function ownedHostProcess(branchId: string) {
     }
   };
 }
+export async function ownedHostFolder(kind: 'database' | 'backup' | 'report') {
+  const { settings } = await readConfig();
+  const root = await realpath(settings.directory);
+  const folder = path.join(root, { database: 'data', backup: 'backups', report: 'reports' }[kind]);
+  // Only fixed operational folders in this account's configured local host.
+  await mkdir(folder, { recursive: true });
+  const physical = await realpath(folder);
+  if (!physical.startsWith(root + path.sep) || !(await stat(physical)).isDirectory())
+    throw new Error('Host folder must stay inside the configured branch directory');
+  return physical;
+}
 export async function resumeHost() {
   if (connectionInfo().configured) throw new Error('Disconnect before changing device setup');
   const stored = await readConfig();

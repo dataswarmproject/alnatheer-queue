@@ -50,6 +50,10 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.getByLabel('عنوان خدمة الفرع').fill(fixture.url);
     await page.getByLabel('مفتاح الجهاز', { exact: true }).fill(fixture.manager.token);
     await page.getByRole('button', { name: 'اتصال', exact: true }).click();
+    expect(await page.evaluate(() => window.queue.canBrowseHostFolders())).toBe(false);
+    await expect(page.evaluate(() => window.queue.browseHostFolder('database'))).rejects.toThrow(
+      'استعرض ملفات الخادم',
+    );
     await expect(page.locator('[data-calendar="hijri"]')).toContainText('هـ');
     await expect(page.locator('[data-calendar="gregorian"]')).toBeVisible();
     await page.evaluate(() => window.queue.windowAction('maximize'));

@@ -26,12 +26,8 @@ const { createServer } = require('node:net');
     await page.getByRole('button', { name: 'تغيير الاستخدام', exact: true }).click();
     await page.getByRole('button', { name: 'خادم الفرع', exact: false }).click();
     const setupInfo = await page.evaluate(() => window.queue.hostSetupInfo());
-    if (setupInfo.localVoiceAvailable) {
-      await expect(
-        page.getByText('نداء عربي جاهز يعمل دون اشتراك أو اتصال بالإنترنت.'),
-      ).toBeVisible();
-      await expect(page.getByLabel('مفتاح خدمة الصوت', { exact: true })).toHaveCount(0);
-    }
+    await expect(page.getByText('نداء عربي جاهز', { exact: false })).toHaveCount(0);
+    await expect(page.getByLabel('مفتاح خدمة الصوت', { exact: true })).toHaveCount(0);
     await expect(page.getByLabel('معرّف الفرع في SARAF')).toBeVisible();
     await expect(page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true })).toBeVisible();
     const reservation = createServer();
@@ -107,6 +103,22 @@ const { createServer } = require('node:net');
       fs.access(path.join(serverFolder, 'initial-manager.queue-pairing.json')),
     ).rejects.toThrow();
     const endpoint = `http://127.0.0.1:${port}`;
+    expect(await page.evaluate(() => window.queue.canBrowseHostFolders())).toBe(true);
+    await app.evaluate(({ app, shell }) => {
+      app.queueTestFolders = [];
+      shell.openPath = async folder => {
+        app.queueTestFolders.push(folder);
+        return '';
+      };
+    });
+    for (const kind of ['database', 'backup', 'report'])
+      await page.evaluate(value => window.queue.browseHostFolder(value), kind);
+    expect(await app.evaluate(({ app }) => app.queueTestFolders)).toEqual(
+      await Promise.all(
+        ['data', 'backups', 'reports'].map(folder => fs.realpath(path.join(serverFolder, folder))),
+      ),
+    );
+    await expect(page.evaluate(() => window.queue.browseHostFolder('../other'))).rejects.toThrow();
     // Playwright launches through cmd.exe on Windows, which waits for descendants.
     // Close the real GUI first; keep its test wrapper until the detached host is stopped.
     retiredApps.push(app);
