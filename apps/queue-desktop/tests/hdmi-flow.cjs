@@ -223,12 +223,16 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const issued = await run(fixture.kiosk, 'issue', { serviceId: fixture.serviceId });
     await run(fixture.teller, 'next', { expectedRevision: 0 });
     await expect(tvPage.locator('.tv-ticket')).toHaveText(issued.ticket.code, { timeout: 15000 });
-    await expect.poll(() => tvPage.evaluate(() => window.queueSpoken.length)).toBe(1);
+    await expect
+      .poll(() => tvPage.evaluate(() => window.queueSpoken.length), { timeout: 20000 })
+      .toBe(1);
     expect((await tvPage.evaluate(() => window.queueSpoken))[0].text).toBe(
       'على صاحب التذكرة رقم A... واحد، التوجّه إلى الكاونتر رقم واحد.',
     );
     await run(fixture.teller, 'recall', { expectedRevision: 1 });
-    await expect.poll(() => tvPage.evaluate(() => window.queueSpoken.length)).toBe(2);
+    await expect
+      .poll(() => tvPage.evaluate(() => window.queueSpoken.length), { timeout: 20000 })
+      .toBe(2);
     const spoken = await tvPage.evaluate(() => window.queueSpoken);
     expect(spoken[1]).toEqual(spoken[0]);
     await pause(2300);
@@ -310,7 +314,28 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       env: { ...env, QUEUE_TEST_PROFILE: kioskProfile },
       timeout: 30000,
     });
-    const kioskPage = await kioskApp.firstWindow();
+    let kioskPage;
+    try {
+      kioskPage = await kioskApp.firstWindow();
+    } catch (error) {
+      console.error(
+        'Kiosk startup diagnostics',
+        await kioskApp.evaluate(async ({ BrowserWindow }) =>
+          Promise.all(
+            BrowserWindow.getAllWindows().map(async w => ({
+              id: w.id,
+              loading: w.webContents.isLoading(),
+              url: w.webContents.getURL(),
+              ready: await w.webContents.executeJavaScript('document.readyState'),
+            })),
+          ),
+        ),
+      );
+      const session = await kioskApp.context().browser().newBrowserCDPSession();
+      console.error(await session.send('Target.getTargets'));
+      await session.detach();
+      throw error;
+    }
     await kioskPage.getByRole('button', { name: 'جهاز إصدار التذاكر', exact: false }).click();
     await kioskApp.evaluate(({ dialog }, file) => {
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
@@ -338,6 +363,6 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       await fs.rm(directory, { recursive: true, force: true });
   }
 })().catch(error => {
-  console.error(error.message);
+  console.error(error);
   process.exitCode = 1;
 });

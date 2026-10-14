@@ -4,7 +4,8 @@ import {
   Pause,
   Play,
   UserXmark,
-  Settings,
+  SkipNext,
+  Check,
   Star,
   StarSolid,
 } from 'iconoir-react';
@@ -81,7 +82,7 @@ export function TellerActions({
             : mode === 'dock'
               ? 'نداء التذكرة التالية'
               : 'نداء التالي',
-      Icon: Settings,
+      Icon: ticket?.status === 'serving' ? Check : ticket ? Play : SkipNext,
       tone: 'green',
       blocked: (paused && ticket?.status !== 'serving') || (!ticket && !snapshot?.waiting.length),
       click: () => run(ticket?.status === 'serving' ? 'complete' : ticket ? 'start' : 'next'),
