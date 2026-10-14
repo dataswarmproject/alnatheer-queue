@@ -1,4 +1,5 @@
-const { _electron: electron, expect } = require('@playwright/test');
+const { expect } = require('@playwright/test');
+const electron = require('./electron-launch.cjs');
 const { spawn } = require('node:child_process'),
   fs = require('node:fs/promises'),
   path = require('node:path'),

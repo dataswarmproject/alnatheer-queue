@@ -1,4 +1,5 @@
-const { _electron: electron, expect } = require('@playwright/test');
+const { expect } = require('@playwright/test');
+const electron = require('./electron-launch.cjs');
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs/promises');

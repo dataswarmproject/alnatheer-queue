@@ -1,4 +1,5 @@
-const { _electron: electron, expect } = require('@playwright/test');
+const { expect } = require('@playwright/test');
+const electron = require('./electron-launch.cjs');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs/promises'),
   path = require('node:path'),
@@ -314,28 +315,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       env: { ...env, QUEUE_TEST_PROFILE: kioskProfile },
       timeout: 30000,
     });
-    let kioskPage;
-    try {
-      kioskPage = await kioskApp.firstWindow();
-    } catch (error) {
-      console.error(
-        'Kiosk startup diagnostics',
-        await kioskApp.evaluate(async ({ BrowserWindow }) =>
-          Promise.all(
-            BrowserWindow.getAllWindows().map(async w => ({
-              id: w.id,
-              loading: w.webContents.isLoading(),
-              url: w.webContents.getURL(),
-              ready: await w.webContents.executeJavaScript('document.readyState'),
-            })),
-          ),
-        ),
-      );
-      const session = await kioskApp.context().browser().newBrowserCDPSession();
-      console.error(await session.send('Target.getTargets'));
-      await session.detach();
-      throw error;
-    }
+    const kioskPage = await kioskApp.firstWindow();
     await kioskPage.getByRole('button', { name: 'جهاز إصدار التذاكر', exact: false }).click();
     await kioskApp.evaluate(({ dialog }, file) => {
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
