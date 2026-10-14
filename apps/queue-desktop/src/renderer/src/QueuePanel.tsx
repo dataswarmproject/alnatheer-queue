@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useRef, useState } from 'react';
 import type { QueueController } from './useQueue';
 import { Printer, Star } from 'iconoir-react';
@@ -91,7 +92,7 @@ export function QueuePanel({
           <h2>تحويل {ticket.code}</h2>
           <label>
             الخدمة المطلوبة
-            <select ref={select} required value={target} onChange={e => setTarget(e.target.value)}>
+            <Select ref={select} required value={target} onChange={e => setTarget(e.target.value)}>
               <option value="">اختر خدمة</option>
               {snapshot.services
                 .filter(s => s.active)
@@ -100,7 +101,7 @@ export function QueuePanel({
                     {s.name}
                   </option>
                 ))}
-            </select>
+            </Select>
           </label>
           <div className="row">
             <button className="primary" disabled={queue.busy || !queue.online}>

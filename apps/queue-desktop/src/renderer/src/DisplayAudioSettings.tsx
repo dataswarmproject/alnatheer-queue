@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useState } from 'react';
 import type { AudioSettings, AudioStatus } from '../../audio-contract';
 
@@ -60,7 +61,7 @@ export function DisplayAudioSettings() {
       </p>
       <label>
         أسلوب النداء
-        <select
+        <Select
           disabled={busy || !status}
           value={status?.settings.mode ?? 'auto'}
           onChange={e => save({ mode: e.target.value as AudioSettings['mode'] })}
@@ -68,12 +69,12 @@ export function DisplayAudioSettings() {
           <option value="auto">تلقائي · المكتبة العربية أولًا</option>
           <option value="natural">تسجيلات النداء</option>
           <option value="local">صوت الجهاز</option>
-        </select>
+        </Select>
       </label>
       {runtime?.mode === 'local' && runtime.voices.length > 0 && (
         <label>
           الصوت العربي
-          <select
+          <Select
             disabled={busy}
             value={status?.settings.voiceURI || runtime.voiceURI}
             onChange={e => save({ voiceURI: e.target.value })}
@@ -83,7 +84,7 @@ export function DisplayAudioSettings() {
                 {v.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       )}
       <label>

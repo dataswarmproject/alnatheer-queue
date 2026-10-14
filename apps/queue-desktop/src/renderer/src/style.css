@@ -137,6 +137,35 @@ input[type='checkbox'] {
   min-height: 18px;
   accent-color: var(--green);
 }
+.select-field {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.select-field select {
+  appearance: none;
+  padding-inline: 12px 36px;
+  text-overflow: ellipsis;
+}
+.select-field > svg {
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--ds-gray-900);
+  pointer-events: none;
+}
+.select-field select:disabled + svg {
+  opacity: 0.38;
+}
+@media (forced-colors: active) {
+  .select-field > svg {
+    color: ButtonText;
+  }
+}
 label {
   display: flex;
   flex-direction: column;
@@ -1628,8 +1657,7 @@ textarea:hover {
   min-width: 0;
 }
 .manager .config-row {
-  border-radius: 8px;
-  background: var(--ds-background-200);
+  background: transparent;
 }
 .geist-card {
   background: var(--ds-background-100);

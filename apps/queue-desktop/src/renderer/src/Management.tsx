@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useState } from 'react';
 import type { Service, Role } from '@saraf/queue-core';
 import type { QueueController } from './useQueue';
@@ -221,17 +222,17 @@ export function Management({
         <div className="config-row">
           <label>
             نوع الجهاز
-            <select value={role} onChange={e => setRole(e.target.value as Role)}>
+            <Select value={role} onChange={e => setRole(e.target.value as Role)}>
               <option value="teller">موظف كاونتر</option>
               <option value="kiosk">كشك التذاكر والطابعة</option>
               <option value="display">شاشة انتظار / شاشة كاونتر</option>
               <option value="manager">إدارة الفرع</option>
-            </select>
+            </Select>
           </label>
           {(role === 'teller' || role === 'display') && (
             <label>
               الكاونتر
-              <select
+              <Select
                 required={role === 'teller'}
                 value={counterId}
                 onChange={e => setCounterId(e.target.value)}
@@ -242,7 +243,7 @@ export function Management({
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
         </div>

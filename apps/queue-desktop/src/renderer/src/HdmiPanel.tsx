@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useState } from 'react';
 import type { TvStatus } from '../../setup-contract';
 import { DisplayAudioSettings } from './DisplayAudioSettings';
@@ -40,7 +41,7 @@ export function HdmiPanel() {
       </p>
       <label>
         شاشة العرض
-        <select value={selected} disabled={busy} onChange={e => setSelected(e.target.value)}>
+        <Select value={selected} disabled={busy} onChange={e => setSelected(e.target.value)}>
           <option value="">اختر الشاشة الثانية</option>
           {status?.monitors.map(m => (
             <option key={m.id} value={m.id}>
@@ -48,7 +49,7 @@ export function HdmiPanel() {
               {m.primary ? ' · الرئيسية' : ''}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {(status?.monitors.length ?? 0) < 2 && (
         <p role="status">لم تُكتشف شاشة ثانية. تحقق من كابل HDMI ووضع «توسيع»، ثم حدّث الشاشات.</p>

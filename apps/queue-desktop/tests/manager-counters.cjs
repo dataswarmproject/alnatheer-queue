@@ -71,12 +71,40 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
     }
+    const roleSelect = page.getByLabel('نوع الجهاز');
+    await roleSelect.press('Home');
+    await roleSelect.press('ArrowDown');
+    await expect(roleSelect).toHaveValue('kiosk');
+    await roleSelect.press('Home');
+    await expect(roleSelect).toHaveValue('teller');
+    const selectLayout = await roleSelect.evaluate(element => {
+      const arrow = element.nextElementSibling.getBoundingClientRect(),
+        field = element.getBoundingClientRect();
+      return {
+        arrowInset: arrow.left - field.left,
+        padding: parseFloat(getComputedStyle(element).paddingLeft),
+      };
+    });
+    expect(selectLayout.arrowInset).toBeGreaterThanOrEqual(8);
+    expect(selectLayout.padding).toBeGreaterThanOrEqual(32);
+    expect(
+      await page
+        .locator('.management form')
+        .nth(1)
+        .locator('.config-row')
+        .first()
+        .evaluate(element => getComputedStyle(element).backgroundColor),
+    ).toBe('rgba(0, 0, 0, 0)');
     await fs.mkdir(path.join(root, 'test-results'), { recursive: true });
     await page.setViewportSize({ width: 1280, height: 1000 });
     await page.locator('.panel-content').evaluate(element => {
       element.scrollTop = 0;
     });
     await page.screenshot({ path: path.join(root, 'test-results/manager-form-guidance.png') });
+    await page
+      .locator('.management form')
+      .nth(1)
+      .screenshot({ path: path.join(root, 'test-results/manager-device-form-guidance.png') });
     await page.getByRole('button', { name: 'الكاونترات', exact: true }).click();
     await expect(page.locator('.counter-card')).toHaveCount(1);
     await page.getByRole('button', { name: 'إنشاء كاونتر', exact: true }).click();

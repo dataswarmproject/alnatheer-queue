@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useState } from 'react';
 import { Form } from './Form';
 import { Xmark, Printer } from 'iconoir-react';
@@ -75,7 +76,7 @@ export function DeviceSettings({
         >
           <label>
             الطابعة
-            <select
+            <Select
               aria-label="الطابعة"
               disabled={busy}
               value={preferences.printerName ?? ''}
@@ -93,11 +94,11 @@ export function DeviceSettings({
                   {p.displayName || p.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label>
             عرض الورق
-            <select
+            <Select
               disabled={busy}
               value={preferences.paperWidth}
               onChange={e =>
@@ -109,7 +110,7 @@ export function DeviceSettings({
             >
               <option value="80mm">80 مم</option>
               <option value="58mm">58 مم</option>
-            </select>
+            </Select>
           </label>
           <label className="checkbox">
             <input

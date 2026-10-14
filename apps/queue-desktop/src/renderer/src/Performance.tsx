@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useState } from 'react';
 import { businessDay } from '@saraf/queue-core';
 import type { QueueAnalytics } from '@saraf/queue-core/analytics';
@@ -52,11 +53,11 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
       <div className="filters">
         <label>
           الفترة
-          <select value={days} onChange={e => setDays(Number(e.target.value))}>
+          <Select value={days} onChange={e => setDays(Number(e.target.value))}>
             <option value={1}>اليوم</option>
             <option value={7}>آخر ٧ أيام</option>
             <option value={30}>آخر ٣٠ يومًا</option>
-          </select>
+          </Select>
         </label>
         <label>
           هدف الانتظار بالدقائق
@@ -75,11 +76,11 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
         </button>
         <label>
           صيغة تقرير الفرع
-          <select value={format} onChange={e => setFormat(e.target.value as typeof format)}>
+          <Select value={format} onChange={e => setFormat(e.target.value as typeof format)}>
             <option value="pdf">PDF · تقرير مقروء</option>
             <option value="csv">CSV · جداول Excel</option>
             <option value="json">JSON · بيانات كاملة</option>
-          </select>
+          </Select>
         </label>
         <button
           disabled={!report || busy}
@@ -101,7 +102,7 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
         <>
           <label>
             تحليل كاونتر
-            <select value={counterId} onChange={e => setCounterId(e.target.value)}>
+            <Select value={counterId} onChange={e => setCounterId(e.target.value)}>
               <option value="">اختر الكاونتر</option>
               {report.counters.map(c => (
                 <option value={c.id} key={c.id}>
@@ -109,7 +110,7 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
                   {c.archived ? ' · محذوف' : ''}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           {report.counters.find(c => c.id === counterId) && (
             <CounterAnalysis

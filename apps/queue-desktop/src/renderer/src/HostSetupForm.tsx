@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useState } from 'react';
 import { hostSetupSchema, type HostSetupInfo } from '../../setup-contract';
 
@@ -173,14 +174,14 @@ export function HostSetupForm({
             <summary>اتصال أجهزة الفرع والمركز</summary>
             <label>
               الوصول إلى الخادم
-              <select value={host} disabled={busy} onChange={e => setHost(e.target.value)}>
+              <Select value={host} disabled={busy} onChange={e => setHost(e.target.value)}>
                 <option value="127.0.0.1">هذا الكمبيوتر فقط</option>
                 {info?.addresses.map(address => (
                   <option key={address} value={address}>
                     شبكة محلية أو VPN · {address}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label>
               منفذ الخادم

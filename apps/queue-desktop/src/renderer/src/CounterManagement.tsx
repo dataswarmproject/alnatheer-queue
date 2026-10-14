@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { useEffect, useState } from 'react';
 import type { Command, Counter } from '@saraf/queue-core';
 import { counterNumber as numberOf } from '@saraf/queue-core/counters';
@@ -117,7 +118,7 @@ export function CounterManagement({
           <div className="config-row">
             <label>
               رقم الكاونتر
-              <select
+              <Select
                 value={number}
                 disabled={disabled}
                 onChange={e => setNumber(Number(e.target.value))}
@@ -133,7 +134,7 @@ export function CounterManagement({
                     {n}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label>
               اسم إضافي · اختياري
