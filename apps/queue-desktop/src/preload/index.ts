@@ -21,6 +21,7 @@ const bridge: QueueBridge = {
   canBrowseHostFolders: () => ipcRenderer.invoke('queue:can-browse-host-folders'),
   browseHostFolder: kind => ipcRenderer.invoke('queue:browse-host-folder', kind),
   createHost: input => ipcRenderer.invoke('queue:create-host', input),
+  branchIdentity: action => ipcRenderer.invoke('queue:branch-identity', action),
   resumeHost: () => ipcRenderer.invoke('queue:resume-host'),
   tvStatus: () => ipcRenderer.invoke('queue:tv-status'),
   openTv: id => ipcRenderer.invoke('queue:tv-open', id),

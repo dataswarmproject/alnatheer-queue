@@ -30,6 +30,19 @@ export function ServerPanel() {
           timeStyle: 'short',
         }).format(new Date(value))
       : '—';
+  const identity = async (action: 'copy' | 'export') => {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      if (await window.queue.branchIdentity(action))
+        setMessage(action === 'copy' ? 'نُسخ معرّف الفرع.' : 'حُفظ ملف معرّف الفرع لربط SARAF.');
+    } catch {
+      setError('تعذر نسخ معرّف الفرع أو حفظه. عند الحفظ اختر اسم ملف جديدًا.');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <section>
       <h2>خادم الفرع</h2>
@@ -56,7 +69,17 @@ export function ServerPanel() {
           <dl className="server-details">
             <div>
               <dt>معرّف الفرع</dt>
-              <dd dir="ltr">{status.branchId}</dd>
+              <dd>
+                <span dir="ltr">{status.branchId}</span>
+                <div className="row">
+                  <button disabled={busy} onClick={() => void identity('copy')}>
+                    نسخ المعرّف
+                  </button>
+                  <button disabled={busy} onClick={() => void identity('export')}>
+                    حفظ ملف المعرّف
+                  </button>
+                </div>
+              </dd>
             </div>
             <div>
               <dt>آخر اتصال بالمركز</dt>
@@ -81,6 +104,10 @@ export function ServerPanel() {
               <dd>{status.reportsConfigured ? 'مفعلة' : 'لم تُضبط'}</dd>
             </div>
           </dl>
+          <p>
+            عند تجهيز SARAF، سجّل الفرع بالمعرّف نفسه قبل تفعيل المزامنة. ملف المعرّف لا يحتوي
+            مفاتيح اتصال، ولا يفعّل الربط تلقائيًا.
+          </p>
           <h2>نسخ قاعدة البيانات</h2>
           {speech?.restartRequired && (
             <p role="status">لتطبيق إعدادات النداء، أعد تشغيل خادم الفرع.</p>

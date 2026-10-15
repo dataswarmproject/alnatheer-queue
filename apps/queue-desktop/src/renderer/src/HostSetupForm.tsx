@@ -1,6 +1,6 @@
 import { Select } from './Select';
 import { useEffect, useState } from 'react';
-import { hostSetupSchema, type HostSetupInfo } from '../../setup-contract';
+import { hostSetupRequestSchema, type HostSetupInfo } from '../../setup-contract';
 
 export function HostSetupForm({
   onConnected,
@@ -12,7 +12,6 @@ export function HostSetupForm({
   const [info, setInfo] = useState<HostSetupInfo | null>(null),
     [directory, setDirectory] = useState('');
   const [branchId, setBranchId] = useState(''),
-    [localEvaluation, setLocalEvaluation] = useState(false),
     [port, setPort] = useState(4318),
     [host, setHost] = useState('127.0.0.1');
   const [url, setUrl] = useState(''),
@@ -83,9 +82,8 @@ export function HostSetupForm({
           onSubmit={e => {
             e.preventDefault();
             void run(async () => {
-              const parsed = hostSetupSchema.safeParse({
-                branchId,
-                localEvaluation,
+              const parsed = hostSetupRequestSchema.safeParse({
+                ...(branchId ? { branchId } : {}),
                 directory,
                 port,
                 host,
@@ -101,45 +99,29 @@ export function HostSetupForm({
             });
           }}
         >
-          <label>
-            معرّف الفرع في SARAF
-            <input
-              value={branchId}
-              onChange={e => {
-                setBranchId(e.target.value.trim());
-                setLocalEvaluation(false);
-              }}
-              disabled={busy}
-              required
-              dir="ltr"
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              autoComplete="off"
-              spellCheck={false}
-              aria-describedby="branch-id-help"
-            />
-          </label>
-          <small id="branch-id-help">
-            يوفّره مسؤول SARAF من سجل الفرع. ليس اسم الفرع أو مفتاح الجهاز. لا تغيّر معرّف قاعدة
-            موجودة.
-          </small>
-          <button
-            type="button"
-            disabled={busy || !!syncUrl}
-            onClick={() => {
-              setBranchId(crypto.randomUUID());
-              setLocalEvaluation(true);
-              setSyncKey('');
-              setError('');
-            }}
-          >
-            إنشاء معرّف لتجربة محلية فقط
-          </button>
-          {localEvaluation && (
-            <p role="status">
-              تجربة محلية مستقلة بدون مزامنة SARAF. للإنتاج، استخدم معرّف الفرع الحقيقي قبل إنشاء
-              قاعدة البيانات.
-            </p>
-          )}
+          <p id="branch-id-help">
+            يُنشأ معرّف الفرع تلقائيًا ويُحفظ مع قاعدة البيانات. يمكنك نسخه أو حفظ ملفه من «إدارة
+            النظام» لربط الفرع بـ SARAF لاحقًا.
+          </p>
+          <details className="setup-advanced">
+            <summary>لديّ معرّف فرع مسجّل في SARAF</summary>
+            <label>
+              معرّف الفرع الحالي · اختياري
+              <input
+                value={branchId}
+                onChange={e => setBranchId(e.target.value.trim())}
+                disabled={busy}
+                dir="ltr"
+                placeholder="اتركه فارغًا لإنشاء معرّف تلقائيًا"
+                autoComplete="off"
+                spellCheck={false}
+                aria-describedby="branch-id-help"
+              />
+            </label>
+            <small>
+              إذا كان الفرع مسجّلًا بالفعل، استخدم معرّفه الحالي لتجنّب إنشاء هوية أخرى له.
+            </small>
+          </details>
           <label>
             مجلد بيانات الفرع
             <span className="path-picker">
@@ -260,7 +242,7 @@ export function HostSetupForm({
               <input
                 type="url"
                 value={syncUrl}
-                disabled={busy || localEvaluation}
+                disabled={busy}
                 onChange={e => setSyncUrl(e.target.value)}
                 dir="ltr"
                 placeholder="https://saraf.example/api/queue/sync"

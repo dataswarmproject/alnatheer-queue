@@ -39,22 +39,19 @@ const { createServer } = require('node:net');
     const setupInfo = await page.evaluate(() => window.queue.hostSetupInfo());
     await expect(page.getByText('نداء عربي جاهز', { exact: false })).toHaveCount(0);
     await expect(page.getByLabel('مفتاح خدمة الصوت', { exact: true })).toHaveCount(0);
-    await expect(page.getByLabel('معرّف الفرع في SARAF')).toBeVisible();
+    await expect(page.getByText('يُنشأ معرّف الفرع تلقائيًا', { exact: false })).toBeVisible();
     await expect(page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true })).toBeVisible();
     const reservation = createServer();
     await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
     const port = reservation.address().port;
     await new Promise(resolve => reservation.close(resolve));
-    await page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true }).click();
-    await expect(page.getByRole('alert')).toContainText('أدخل معرّف الفرع');
-    await page.getByLabel('معرّف الفرع في SARAF').fill('not-a-uuid');
+    await page.getByText('لديّ معرّف فرع مسجّل في SARAF', { exact: true }).click();
+    await page.getByLabel('معرّف الفرع الحالي · اختياري').fill('not-a-uuid');
     await page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('UUID');
-    await page.getByRole('button', { name: 'إنشاء معرّف لتجربة محلية فقط' }).click();
-    const generatedId = await page.getByLabel('معرّف الفرع في SARAF').inputValue();
-    expect(generatedId).toMatch(/^[a-f0-9-]{36}$/);
+    await page.getByLabel('معرّف الفرع الحالي · اختياري').fill('');
     await page.getByText('اتصال أجهزة الفرع والمركز', { exact: true }).click();
-    await expect(page.getByLabel('عنوان مزامنة SARAF · اختياري')).toBeDisabled();
+    await expect(page.getByLabel('عنوان مزامنة SARAF · اختياري')).toBeEnabled();
     await page.getByLabel('منفذ الخادم').fill(String(port));
     // The wizard never replaces an occupied folder, including a real-looking old database.
     const occupied = path.join(directory, 'occupied');
@@ -75,12 +72,45 @@ const { createServer } = require('node:net');
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
     }, serverFolder);
     await page.getByRole('button', { name: 'اختيار مجلد فارغ', exact: true }).click();
+    await page.getByText('لديّ معرّف فرع مسجّل في SARAF', { exact: true }).click();
+    await page.getByText('اتصال أجهزة الفرع والمركز', { exact: true }).click();
+    await fs.mkdir(path.join(root, 'test-results'), { recursive: true });
+    await page.screenshot({ path: path.join(root, 'test-results/branch-auto-setup.png') });
     await page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true }).click();
     await expect(page.getByRole('button', { name: 'الإعدادات', exact: true })).toBeVisible({
       timeout: 60000,
     });
     const snapshot = await page.evaluate(() => window.queue.snapshot());
-    expect(snapshot.branchId).toBe(generatedId);
+    expect(snapshot.branchId).toMatch(
+      /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/,
+    );
+    await page.getByRole('button', { name: 'إدارة النظام', exact: true }).click();
+    await page.getByRole('button', { name: 'نسخ المعرّف', exact: true }).click();
+    await expect(page.getByText('نُسخ معرّف الفرع.', { exact: true })).toBeVisible();
+    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(snapshot.branchId);
+    const identityFile = path.join(directory, 'branch-identity.json');
+    await app.evaluate(({ dialog }, file) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
+    }, identityFile);
+    await page.getByRole('button', { name: 'حفظ ملف المعرّف', exact: true }).click();
+    await expect(page.getByText('حُفظ ملف معرّف الفرع لربط SARAF.', { exact: true })).toBeVisible();
+    expect(JSON.parse(await fs.readFile(identityFile, 'utf8'))).toEqual({
+      version: 1,
+      kind: 'saraf-branch-identity',
+      branchId: snapshot.branchId,
+    });
+    await expect(page.evaluate(() => window.queue.branchIdentity('export'))).rejects.toThrow();
+    expect(JSON.parse(await fs.readFile(identityFile, 'utf8'))).toEqual({
+      version: 1,
+      kind: 'saraf-branch-identity',
+      branchId: snapshot.branchId,
+    });
+    await app.evaluate(({ dialog }) => {
+      dialog.showSaveDialog = async () => ({ canceled: true });
+    });
+    expect(await page.evaluate(() => window.queue.branchIdentity('export'))).toBe(false);
+    await fs.mkdir(path.join(root, 'test-results'), { recursive: true });
+    await page.screenshot({ path: path.join(root, 'test-results/branch-identity-saved.png') });
     if (setupInfo.localVoiceAvailable) {
       const voice = JSON.parse(
         await fs.readFile(path.join(serverFolder, 'speech-cache/voice-library.json'), 'utf8'),

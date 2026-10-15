@@ -209,6 +209,10 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       )
       .toBe(true);
     const teller = await launch('teller');
+    await expect(teller.page.evaluate(() => window.queue.branchIdentity('copy'))).rejects.toThrow();
+    await expect(
+      kiosk.page.evaluate(() => window.queue.branchIdentity('export')),
+    ).rejects.toThrow();
     await expect(teller.page.getByRole('button', { name: 'نداء التذكرة التالية' })).toBeEnabled({
       timeout: 15000,
     });

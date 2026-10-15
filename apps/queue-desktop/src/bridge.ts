@@ -13,7 +13,7 @@ import type { ServerStatus } from '@saraf/queue-core/server';
 import type { SpeechRequest, SpeechAudio } from '@saraf/queue-core/speech';
 import type { z } from 'zod';
 import type { backupSummarySchema } from '@saraf/queue-core/server';
-import type { DeviceMode, HostSetup, HostSetupInfo, TvStatus } from './setup-contract';
+import type { DeviceMode, HostSetupRequest, HostSetupInfo, TvStatus } from './setup-contract';
 import type { AudioSettings, AudioRuntime, AudioStatus } from './audio-contract';
 import type {
   OperationsSettings,
@@ -42,7 +42,8 @@ export interface QueueBridge {
   chooseSetupPath(kind: 'directory' | 'cert' | 'key'): Promise<string | null>;
   canBrowseHostFolders(): Promise<boolean>;
   browseHostFolder(kind: 'database' | 'backup' | 'report'): Promise<void>;
-  createHost(input: HostSetup): Promise<void>;
+  createHost(input: HostSetupRequest): Promise<void>;
+  branchIdentity(action: 'copy' | 'export'): Promise<boolean>;
   resumeHost(): Promise<void>;
   tvStatus(): Promise<TvStatus>;
   openTv(displayId: number): Promise<void>;

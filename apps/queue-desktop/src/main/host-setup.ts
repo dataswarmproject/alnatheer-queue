@@ -3,11 +3,12 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, readFile, readdir, writeFile, unlink, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { networkInterfaces, hostname } from 'node:os';
 import { createServer } from 'node:net';
 import { z } from 'zod';
 import { snapshotSchema, trustedEndpoint } from '@saraf/queue-core';
-import { hostSetupSchema, type HostSetup } from '../setup-contract';
+import { hostSetupSchema, hostSetupRequestSchema, type HostSetup } from '../setup-contract';
 import { connect, connectionInfo, send } from './client';
 import { installLocalVoice, localVoiceAvailable } from './local-voice-library';
 
@@ -191,7 +192,11 @@ export async function createHost(input: unknown) {
   creating = true;
   try {
     if (connectionInfo().configured) throw new Error('Disconnect before changing device setup');
-    const settings = hostSetupSchema.parse(input);
+    const submitted = hostSetupRequestSchema.parse(input);
+    const settings = hostSetupSchema.parse({
+      ...submitted,
+      branchId: submitted.branchId ?? randomUUID(),
+    });
     let directory = path.resolve(settings.directory);
     if (directory !== defaultDirectory() && !chosen.get('directory')?.has(directory))
       throw new Error('Choose the data folder using the folder picker');

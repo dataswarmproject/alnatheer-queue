@@ -21,9 +21,9 @@ export function assertDeviceMode(mode: DeviceMode | undefined, snapshot: Snapsho
     throw new Error('مفتاح الجهاز لا يطابق الاستخدام المختار. اطلب المفتاح الصحيح من مدير الفرع.');
   }
 }
-export const hostSetupSchema = z
+const hostSetupFields = z
   .object({
-    branchId: z.string().uuid('أدخل معرّف الفرع UUID من SARAF، أو أنشئ معرّفًا لتجربة محلية فقط.'),
+    branchId: z.string().uuid('أدخل معرّف فرع UUID صالحًا، أو اتركه فارغًا لإنشائه تلقائيًا.'),
     localEvaluation: z.boolean().default(false),
     directory: z.string().min(1).max(500),
     port: z.number().int().min(1024).max(65535),
@@ -43,15 +43,24 @@ export const hostSetupSchema = z
       .optional(),
     speechApiKey: z.string().min(10).max(300).optional(),
   })
-  .strict()
-  .superRefine((settings, context) => {
-    if (settings.localEvaluation && (settings.syncUrl || settings.syncKey))
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['syncUrl'],
-        message: 'معرّف التجربة المحلية لا يُستخدم لمزامنة SARAF. استخدم معرّف الفرع الحقيقي.',
-      });
-  });
+  .strict();
+function validateEvaluation(
+  settings: { localEvaluation: boolean; syncUrl?: string; syncKey?: string },
+  context: z.RefinementCtx,
+) {
+  if (settings.localEvaluation && (settings.syncUrl || settings.syncKey))
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['syncUrl'],
+      message: 'معرّف التجربة المحلية لا يُستخدم لمزامنة SARAF. استخدم معرّف الفرع الحقيقي.',
+    });
+}
+// Saved configurations must always contain their original identity.
+export const hostSetupSchema = hostSetupFields.superRefine(validateEvaluation);
+export const hostSetupRequestSchema = hostSetupFields
+  .extend({ branchId: hostSetupFields.shape.branchId.optional() })
+  .superRefine(validateEvaluation);
+export type HostSetupRequest = z.infer<typeof hostSetupRequestSchema>;
 export type HostSetup = z.infer<typeof hostSetupSchema>;
 export type HostSetupInfo = {
   directory: string;

@@ -1,7 +1,10 @@
 import { it, expect } from 'vitest';
 import { randomUUID, X509Certificate } from 'node:crypto';
 import * as tls from 'node:tls';
-import { hostSetupSchema } from '../../../apps/queue-desktop/src/setup-contract';
+import {
+  hostSetupSchema,
+  hostSetupRequestSchema,
+} from '../../../apps/queue-desktop/src/setup-contract';
 import { trustedEndpoint } from '@saraf/queue-core';
 import { useWindowsNetworkTrust } from '@saraf/queue-core/network-trust';
 
@@ -16,7 +19,7 @@ const settings = {
 it('explains missing branch identity and blocks headquarters sync with a local evaluation identity', () => {
   const missing = hostSetupSchema.safeParse({ ...settings, branchId: '' });
   expect(missing.success).toBe(false);
-  if (!missing.success) expect(missing.error.issues[0].message).toContain('SARAF');
+  if (!missing.success) expect(missing.error.issues[0].message).toContain('UUID');
   expect(hostSetupSchema.parse(settings).localEvaluation).toBe(false);
   expect(hostSetupSchema.parse({ ...settings, localEvaluation: true }).branchId).toBe(
     settings.branchId,
@@ -29,6 +32,15 @@ it('explains missing branch identity and blocks headquarters sync with a local e
       syncKey: 'a'.repeat(64),
     }),
   ).toThrow('معرّف التجربة المحلية');
+});
+it('accepts automatic identity requests while keeping saved identities mandatory and explicit IDs unchanged', () => {
+  const { branchId, ...request } = settings;
+  expect(hostSetupRequestSchema.parse(request).branchId).toBeUndefined();
+  expect(hostSetupRequestSchema.parse(settings).branchId).toBe(branchId);
+  expect(() => hostSetupRequestSchema.parse({ ...settings, branchId: 'invalid' })).toThrow('UUID');
+  expect(() => hostSetupSchema.parse(request)).toThrow();
+  // Generating an ID must never silently assign a different identity to a saved database.
+  expect(hostSetupSchema.parse(settings).branchId).toBe(branchId);
 });
 it('allows HTTPS LAN and VPN endpoints but does not accept plaintext or embedded credentials', () => {
   for (const url of [

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { id, snapshotSchema } from './index';
-export const queueVersion = '0.4.3';
+export const queueVersion = '0.4.4';
 export const backupSummarySchema = z
   .object({
     version: z.literal(1),

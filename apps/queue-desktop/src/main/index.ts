@@ -9,6 +9,7 @@ import {
   dialog,
   systemPreferences,
   shell,
+  clipboard,
 } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -435,6 +436,34 @@ app.whenReady().then(async () => {
     if (snapshot.actor.role !== 'manager') throw new Error('Branch manager authorization required');
     return snapshot;
   };
+  handle('queue:branch-identity', async input => {
+    const action = z.enum(['copy', 'export']).parse(input);
+    const generation = connectionGeneration;
+    const snapshot = await requireManager();
+    if (generation !== connectionGeneration) throw new Error('تغير اتصال الفرع. أعد المحاولة.');
+    if (action === 'copy') {
+      clipboard.writeText(snapshot.branchId);
+      return true;
+    }
+    const selected = await dialog.showSaveDialog(window, {
+      title: 'حفظ معرّف الفرع لربط SARAF',
+      defaultPath: `branch-${snapshot.branchId}.json`,
+      filters: [{ name: 'SARAF branch identity', extensions: ['json'] }],
+    });
+    if (selected.canceled || !selected.filePath) return false;
+    if (generation !== connectionGeneration) throw new Error('تغير اتصال الفرع. أعد الحفظ.');
+    // Registration information only; never export connection/device/sync credentials.
+    await writeFile(
+      selected.filePath,
+      JSON.stringify(
+        { version: 1, kind: 'saraf-branch-identity', branchId: snapshot.branchId },
+        null,
+        2,
+      ),
+      { flag: 'wx', mode: 0o600 },
+    );
+    return true;
+  });
   handle('queue:can-browse-host-folders', async () => {
     const snapshot = await requireManager();
     return ownsConnectedHost(snapshot.branchId);
