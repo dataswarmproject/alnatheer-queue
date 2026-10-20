@@ -37,6 +37,7 @@ export function createBranchServer(
     syncConfigured?: boolean;
     cert?: string;
     key?: string;
+    passphrase?: string;
     backupDirectory?: string;
     reportsConfigured?: boolean;
     speech?: NeuralSpeech;
@@ -347,7 +348,11 @@ export function createBranchServer(
   const server =
     options.cert && options.key
       ? https.createServer(
-          { cert: readFileSync(options.cert), key: readFileSync(options.key) },
+          {
+            cert: readFileSync(options.cert),
+            key: readFileSync(options.key),
+            passphrase: options.passphrase,
+          },
           handler,
         )
       : http.createServer(handler);

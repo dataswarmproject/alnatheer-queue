@@ -71,6 +71,7 @@ const root = path.resolve(__dirname, '..');
     const originalConfig = await fs.readFile(path.join(profile, 'branch-host.enc'));
     await page.getByRole('button', { name: 'إدارة النظام', exact: true }).click();
     await page.getByRole('button', { name: 'إعداد اتصال الشبكة', exact: true }).click();
+    await page.getByLabel('طريقة إعداد الشهادة').selectOption('manual');
     await page.getByLabel('واجهة شبكة الخادم').selectOption(address);
     await page.getByLabel('عنوان الخادم HTTPS').fill(`https://127.0.0.1:${port}`);
     for (const [button, file] of [

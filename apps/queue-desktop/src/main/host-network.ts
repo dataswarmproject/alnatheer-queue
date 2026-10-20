@@ -20,6 +20,8 @@ import {
   startHost,
 } from './host-setup';
 import { waitForHostExit } from '../process-exit';
+import { branchFetch, type BranchTrust } from '@saraf/queue-core/branch-tls';
+import { prepareManagedTls } from './managed-tls';
 
 const leaseSchema = z
   .object({ token: z.string().regex(/^[a-f0-9]{64}$/), until: z.string().datetime() })
@@ -49,11 +51,22 @@ async function replaceConfig(value: Buffer) {
 
 // Verify certificate trust, hostname, DNS routing and the exact listening endpoint
 // before taking the live database offline. The probe handles no queue credentials.
-async function probeNetwork(input: z.infer<typeof hostNetworkSchema>) {
+async function probeNetwork(input: {
+  host: string;
+  port: number;
+  url: string;
+  cert: string;
+  key: string;
+  managedTls?: { passphrase: string; trust: BranchTrust };
+}) {
   const nonce = randomUUID();
   const sockets = new Set<Duplex>();
   const server = https.createServer(
-    { cert: await readFile(input.cert), key: await readFile(input.key) },
+    {
+      cert: await readFile(input.cert),
+      key: await readFile(input.key),
+      passphrase: input.managedTls?.passphrase,
+    },
     (_req, res) => {
       res.setHeader('connection', 'close');
       res.end(nonce);
@@ -68,10 +81,14 @@ async function probeNetwork(input: z.infer<typeof hostNetworkSchema>) {
       server.once('error', reject);
       server.listen(input.port, input.host, resolve);
     });
-    const result = await fetch(new URL('/healthz', input.url), {
-      redirect: 'error',
-      signal: AbortSignal.timeout(5000),
-    });
+    const result = await branchFetch(
+      new URL('/healthz', input.url),
+      {
+        redirect: 'error',
+        signal: AbortSignal.timeout(5000),
+      },
+      input.managedTls?.trust,
+    );
     if (!result.ok || (await result.text()) !== nonce)
       throw new Error(
         'عنوان HTTPS لا يصل إلى واجهة شبكة هذا الخادم. تحقق من DNS والعنوان والمنفذ.',
@@ -88,13 +105,20 @@ export async function enableHostNetwork(input: unknown, closeDisplays: () => Pro
   if (applying) throw new Error('جارٍ تغيير اتصال الخادم.');
   applying = true;
   try {
-    const network = hostNetworkSchema.parse(input);
+    const submitted = hostNetworkSchema.parse(input);
+    let network: z.infer<typeof hostNetworkSchema> & {
+      managedTls?: { passphrase: string; trust: BranchTrust };
+    } = submitted;
     const prior = await readHostConfig();
     if (!(await ownsConnectedHost(prior.settings.branchId)) || prior.settings.host !== '127.0.0.1')
       throw new Error(
         'يُفعّل اتصال الشبكة من كمبيوتر الخادم المحلي الذي أُعدّ لهذا الكمبيوتر فقط.',
       );
-    const origin = { url: prior.settings.url, token: prior.token };
+    const origin = {
+      url: prior.settings.url,
+      token: prior.token,
+      trust: prior.settings.managedTls?.trust,
+    };
     const endpoint = trustedEndpoint(network.url);
     if (
       endpoint.protocol !== 'https:' ||
@@ -103,15 +127,24 @@ export async function enableHostNetwork(input: unknown, closeDisplays: () => Pro
       !localAddresses().includes(network.host)
     )
       throw new Error('اختر عنوان LAN/VPN لهذا الكمبيوتر وعنوان HTTPS كاملًا بالمنفذ نفسه.');
+    if (network.tlsMode === 'automatic') {
+      if (endpoint.hostname !== network.host)
+        throw new Error('Use the selected network IP for automatic certificates');
+      network = { ...network, ...(await prepareManagedTls(prior.settings.branchId, network.host)) };
+    }
     for (const kind of ['cert', 'key'] as const) {
-      if (!approvedSetupPath(kind, network[kind]) || (await stat(network[kind])).size > 1024 * 1024)
+      if (
+        !network[kind] ||
+        (network.tlsMode !== 'automatic' && !approvedSetupPath(kind, network[kind]!)) ||
+        (await stat(network[kind]!)).size > 1024 * 1024
+      )
         throw new Error('اختر ملفات شهادة الشبكة ومفتاحها من زر تصفح.');
     }
     const next = {
       settings: hostSetupSchema.parse({ ...prior.settings, ...network, url: endpoint.origin }),
       token: prior.token,
     };
-    await probeNetwork(network);
+    await probeNetwork({ ...network, cert: network.cert!, key: network.key! });
     const originalConfig = await readFile(hostConfigFile());
     const snapshot = snapshotSchema.parse(
       await send(origin, 'GET', '/v1/snapshot', undefined, 10000),
@@ -151,14 +184,23 @@ export async function enableHostNetwork(input: unknown, closeDisplays: () => Pro
       await replaceConfig(safeStorage.encryptString(JSON.stringify(next)));
       replaced = true;
       await startHost(next.settings, next.token);
-      await connect({ url: next.settings.url, token: next.token, mode: 'manager' });
+      await connect({
+        url: next.settings.url,
+        token: next.token,
+        mode: 'manager',
+        trust: next.settings.managedTls?.trust,
+      });
       return { url: next.settings.url, backup: backup.filename };
     } catch (error) {
       if (replaced && (await lockExists())) {
         // A candidate process may be running: ask it to drain before restoring
         // old settings. Never force-kill PostgreSQL or start two database owners.
         try {
-          const candidate = { url: next.settings.url, token: next.token };
+          const candidate = {
+            url: next.settings.url,
+            token: next.token,
+            trust: next.settings.managedTls?.trust,
+          };
           const current = snapshotSchema.parse(
             await send(candidate, 'GET', '/v1/snapshot', undefined, 5000),
           );

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Snapshot } from '@saraf/queue-core';
+import { branchTrustSchema } from '@saraf/queue-core/branch-trust';
 
 export const deviceModeSchema = z.enum([
   'teller',
@@ -31,6 +32,11 @@ const hostSetupFields = z
     url: z.string().min(1).max(200),
     cert: z.string().max(500).optional(),
     key: z.string().max(500).optional(),
+    tlsMode: z.enum(['automatic', 'manual']).optional(),
+    managedTls: z
+      .object({ trust: branchTrustSchema, passphrase: z.string().regex(/^[a-f0-9]{64}$/) })
+      .strict()
+      .optional(),
     syncUrl: z.string().max(200).optional(),
     syncKey: z
       .string()
@@ -58,6 +64,7 @@ function validateEvaluation(
 // Saved configurations must always contain their original identity.
 export const hostSetupSchema = hostSetupFields.superRefine(validateEvaluation);
 export const hostSetupRequestSchema = hostSetupFields
+  .omit({ managedTls: true })
   .extend({ branchId: hostSetupFields.shape.branchId.optional() })
   .superRefine(validateEvaluation);
 export type HostSetupRequest = z.infer<typeof hostSetupRequestSchema>;
@@ -67,8 +74,9 @@ export const hostNetworkSchema = z
     host: z.string().min(1).max(200),
     url: z.string().url().max(200),
     port: z.number().int().min(1024).max(65535),
-    cert: z.string().min(1).max(500),
-    key: z.string().min(1).max(500),
+    cert: z.string().max(500).optional(),
+    key: z.string().max(500).optional(),
+    tlsMode: z.enum(['automatic', 'manual']).optional(),
   })
   .strict();
 export type HostNetwork = z.infer<typeof hostNetworkSchema>;

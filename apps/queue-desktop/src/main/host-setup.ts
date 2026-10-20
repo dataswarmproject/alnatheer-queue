@@ -1,7 +1,16 @@
 import { app, safeStorage } from 'electron';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, readFile, readdir, writeFile, unlink, realpath, stat } from 'node:fs/promises';
+import {
+  mkdir,
+  readFile,
+  readdir,
+  writeFile,
+  unlink,
+  realpath,
+  stat,
+  rename,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { networkInterfaces, hostname } from 'node:os';
@@ -12,6 +21,7 @@ import { hostSetupSchema, hostSetupRequestSchema, type HostSetup } from '../setu
 import { connect, connectionInfo, send } from './client';
 import { installLocalVoice, localVoiceAvailable } from './local-voice-library';
 import { isLegacyRuntime } from '@saraf/queue-core/legacy-runtime';
+import { prepareManagedTls, managedCertificateNeedsRenewal } from './managed-tls';
 
 const exec = promisify(execFile);
 const storedSchema = z
@@ -78,7 +88,13 @@ function runtimeArgs(entry: string) {
 async function ready(settings: HostSetup, token: string) {
   try {
     const snapshot = snapshotSchema.parse(
-      await send({ url: settings.url, token }, 'GET', '/v1/snapshot', undefined, 1500),
+      await send(
+        { url: settings.url, token, trust: settings.managedTls?.trust },
+        'GET',
+        '/v1/snapshot',
+        undefined,
+        1500,
+      ),
     );
     return snapshot.branchId === settings.branchId && snapshot.actor.role === 'manager';
   } catch {
@@ -107,6 +123,7 @@ export async function startHost(settings: HostSetup, token: string) {
     QUEUE_LISTEN_PORT: String(settings.port),
     QUEUE_TLS_CERT: settings.cert ?? '',
     QUEUE_TLS_KEY: settings.key ?? '',
+    QUEUE_TLS_PASSPHRASE: settings.managedTls?.passphrase ?? '',
     QUEUE_SYNC_URL: settings.syncUrl ?? '',
     QUEUE_SYNC_KEY: settings.syncKey ?? '',
     QUEUE_SPEECH_VOICE_ID: settings.speechVoiceId ?? '',
@@ -141,13 +158,45 @@ function startup(enabled: boolean) {
   }
   app.setLoginItemSettings({ openAtLogin: enabled, args: ['--queue-host-only'] });
 }
+// Renew against the same CA only when the service is stopped. Never replace a
+// running host or rotate the trusted branch identity silently.
+async function renewStoppedHost(stored: z.infer<typeof storedSchema>) {
+  if (
+    !stored.settings.managedTls ||
+    !stored.settings.cert ||
+    !(await managedCertificateNeedsRenewal(stored.settings.cert))
+  )
+    return stored;
+  const port = createServer();
+  const free = await new Promise<boolean>(resolve => {
+    port.once('error', () => resolve(false));
+    port.listen(stored.settings.port, stored.settings.host, () => resolve(true));
+  });
+  if (!free) return stored;
+  await new Promise<void>(resolve => port.close(() => resolve()));
+  const renewed = await prepareManagedTls(stored.settings.branchId, stored.settings.host);
+  if (renewed.managedTls.trust.fingerprint !== stored.settings.managedTls.trust.fingerprint)
+    throw new Error('Branch certificate identity changed');
+  const next = { ...stored, settings: { ...stored.settings, ...renewed } };
+  const temporary = configFile() + '.' + randomUUID() + '.tmp';
+  try {
+    await writeFile(temporary, safeStorage.encryptString(JSON.stringify(next)), {
+      flag: 'wx',
+      mode: 0o600,
+    });
+    await rename(temporary, configFile());
+  } finally {
+    await unlink(temporary).catch(() => {});
+  }
+  return next;
+}
 export async function startSavedHost() {
   try {
     await stat(configFile());
   } catch {
     return false;
   }
-  const stored = await readConfig();
+  const stored = await renewStoppedHost(await readConfig());
   await start(stored.settings, stored.token);
   return true;
 }
@@ -199,10 +248,15 @@ export async function ownedHostFolder(kind: 'database' | 'backup' | 'report') {
 }
 export async function resumeHost() {
   if (connectionInfo().configured) throw new Error('Disconnect before changing device setup');
-  const stored = await readConfig();
+  const stored = await renewStoppedHost(await readConfig());
   await start(stored.settings, stored.token);
   startup(stored.settings.openAtLogin);
-  await connect({ url: stored.settings.url, token: stored.token, mode: 'manager' });
+  await connect({
+    url: stored.settings.url,
+    token: stored.token,
+    mode: 'manager',
+    trust: stored.settings.managedTls?.trust,
+  });
 }
 export async function createHost(input: unknown) {
   if (creating) throw new Error('Server setup is already running');
@@ -235,9 +289,14 @@ export async function createHost(input: unknown) {
       if (settings.url !== `http://127.0.0.1:${settings.port}` || settings.cert || settings.key)
         throw new Error('Use the local loopback URL for this-computer mode');
     } else {
-      if (endpoint.protocol !== 'https:' || !settings.cert || !settings.key)
+      if (
+        endpoint.protocol !== 'https:' ||
+        (settings.tlsMode !== 'automatic' && (!settings.cert || !settings.key))
+      )
         throw new Error('Branch network access requires a trusted TLS certificate and private key');
-      for (const kind of ['cert', 'key'] as const) {
+      if (settings.tlsMode === 'automatic' && endpoint.hostname !== settings.host)
+        throw new Error('Use the selected network IP for automatic certificates');
+      for (const kind of settings.tlsMode === 'automatic' ? [] : (['cert', 'key'] as const)) {
         if (!chosen.get(kind)?.has(path.resolve(settings[kind]!)))
           throw new Error('Select certificate files using the file picker');
         if ((await stat(settings[kind]!)).size > 1024 * 1024)
@@ -266,6 +325,8 @@ export async function createHost(input: unknown) {
       probe.listen(settings.port, settings.host, resolve);
     });
     await new Promise<void>(resolve => probe.close(() => resolve()));
+    if (settings.host !== '127.0.0.1' && settings.tlsMode === 'automatic')
+      Object.assign(settings, await prepareManagedTls(settings.branchId, settings.host));
     const pairing = path.join(directory, 'initial-manager.queue-pairing.json');
     await exec(
       process.execPath,

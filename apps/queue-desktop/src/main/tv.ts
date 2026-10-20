@@ -2,7 +2,8 @@ import { BrowserWindow, screen } from 'electron';
 import path from 'node:path';
 import { z } from 'zod';
 import { id, snapshotSchema } from '@saraf/queue-core';
-import { connectionInfo, request, send } from './client';
+import { connectionInfo, connectionTrust, request, send } from './client';
+import type { BranchTrust } from '@saraf/queue-core/branch-tls';
 import type { TvStatus } from '../setup-contract';
 import { speechAudioSchema, type SpeechRequest } from '@saraf/queue-core/speech';
 import { desktopSpeechStatus, guardFreeSpeech } from './speech-policy';
@@ -15,7 +16,7 @@ export function createTvController(
 ) {
   let window: BrowserWindow | null = null;
   let displayId: number | null = null;
-  let device: { id: string; token: string; url: string } | null = null;
+  let device: { id: string; token: string; url: string; trust?: BranchTrust } | null = null;
   let changing = false;
   let generation = 0;
   const status = (): TvStatus => ({
@@ -79,7 +80,12 @@ export function createTvController(
           await request('POST', '/v1/devices/revoke', { id: actor.id }).catch(() => {});
         throw new Error('TV request was canceled');
       }
-      device = { id: actor.id, token: actor.token, url };
+      device = {
+        id: actor.id,
+        token: actor.token,
+        url,
+        ...(connectionTrust() ? { trust: connectionTrust() } : {}),
+      };
       displayId = display.id;
       const win = new BrowserWindow({
         title: 'النذير · شاشة العرض',

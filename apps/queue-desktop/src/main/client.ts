@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { trustedEndpoint, snapshotSchema, roleSchema } from '@saraf/queue-core';
 import { assertDeviceMode, deviceModeSchema } from '../setup-contract';
 import { connectionFailure } from '../pairing-input';
+import { branchFetch, branchTrustSchema, validateBranchTrust } from '@saraf/queue-core/branch-tls';
 
 const connectionSchema = z
   .object({
@@ -14,6 +15,7 @@ const connectionSchema = z
     token: z.string().regex(/^[a-f0-9]{64}$/),
     role: roleSchema.optional(),
     mode: deviceModeSchema.optional(),
+    trust: branchTrustSchema.optional(),
   })
   .strict();
 let credentials: z.infer<typeof connectionSchema> | null = null;
@@ -36,14 +38,21 @@ export function connectionInfo() {
       : {}),
   };
 }
+// Public certificate only. Device credentials are never returned to the renderer.
+export function connectionTrust() {
+  return credentials?.trust;
+}
 export async function connect(input: unknown) {
   const next = connectionSchema.omit({ role: true }).parse(input);
   const url = trustedEndpoint(next.url);
+  if (next.trust) validateBranchTrust(next.trust);
   if (url.pathname !== '/') throw new Error('Enter the branch server root URL');
   const old = credentials;
   credentials = { ...next, url: url.origin };
   try {
     const snapshot = snapshotSchema.parse(await request('GET', '/v1/snapshot'));
+    if (next.trust && snapshot.branchId !== next.trust.branchId)
+      throw new Error('ملف الاقتران لا يطابق هوية خادم الفرع.');
     assertDeviceMode(next.mode, snapshot);
     credentials.role = snapshot.actor.role;
     if (
@@ -75,13 +84,17 @@ export async function request(
 export async function downloadRelease(release: SignedRelease, progress: (percent: number) => void) {
   const origin = credentials;
   if (!origin || origin.role !== 'manager') throw new Error('Manager connection required');
-  const response = await fetch(new URL('/v1/update-release/download', origin.url), {
-    method: 'POST',
-    redirect: 'error',
-    signal: AbortSignal.timeout(300000),
-    headers: { authorization: `Bearer ${origin.token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ version: release.payload.version, sha256: release.payload.sha256 }),
-  });
+  const response = await branchFetch(
+    new URL('/v1/update-release/download', origin.url),
+    {
+      method: 'POST',
+      redirect: 'error',
+      signal: AbortSignal.timeout(300000),
+      headers: { authorization: `Bearer ${origin.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ version: release.payload.version, sha256: release.payload.sha256 }),
+    },
+    origin.trust,
+  );
   if (!response.ok || !response.body) throw new Error('تعذر تنزيل التحديث من المركز.');
   const directory = path.join(app.getPath('userData'), 'update-downloads');
   await mkdir(directory, { recursive: true });
@@ -135,13 +148,17 @@ export async function send(
   input: unknown,
   timeout: number,
 ) {
-  const response = await fetch(new URL(route, connection.url), {
-    method,
-    redirect: 'error',
-    signal: AbortSignal.timeout(timeout),
-    headers: { authorization: `Bearer ${connection.token}`, 'content-type': 'application/json' },
-    ...(input == null ? {} : { body: JSON.stringify(input) }),
-  });
+  const response = await branchFetch(
+    new URL(route, connection.url),
+    {
+      method,
+      redirect: 'error',
+      signal: AbortSignal.timeout(timeout),
+      headers: { authorization: `Bearer ${connection.token}`, 'content-type': 'application/json' },
+      ...(input == null ? {} : { body: JSON.stringify(input) }),
+    },
+    connection.trust,
+  );
   const length = Number(response.headers.get('content-length') ?? 0);
   if (length > 8 * 1024 * 1024) throw new Error('Branch response too large');
   const reader = response.body?.getReader();

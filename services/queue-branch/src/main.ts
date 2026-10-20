@@ -46,6 +46,7 @@ const server = createBranchServer(store, {
   isStopping: () => stopping,
   cert: process.env.QUEUE_TLS_CERT,
   key: process.env.QUEUE_TLS_KEY,
+  passphrase: process.env.QUEUE_TLS_PASSPHRASE,
   syncConfigured: !!process.env.QUEUE_SYNC_URL,
   backupDirectory: (await operations.status()).backupDirectory,
   reportsConfigured: !!process.env.QUEUE_REPORT_DIR,

@@ -67,6 +67,8 @@ import { saveTvLayout, restoreTvLayout } from './tv-layout';
 import { useWindowsNetworkTrust } from '@saraf/queue-core/network-trust';
 import { parseDevicePairing } from '../pairing-input';
 import { hostNetworkInfo, enableHostNetwork } from './host-network';
+import { connectionTrust } from './client';
+import type { BranchTrust } from '@saraf/queue-core/branch-tls';
 
 useWindowsNetworkTrust();
 protocol.registerSchemesAsPrivileged([
@@ -124,6 +126,7 @@ let pairing: {
   role: z.infer<typeof roleSchema>;
   counterId: string | null;
   token: string;
+  trust?: BranchTrust;
 } | null = null;
 function resetConnectionContext() {
   connectionGeneration++;
@@ -416,7 +419,7 @@ app.whenReady().then(async () => {
     if ((await stat(selected.filePaths[0])).size > 16384) throw new Error('Pairing file too large');
     const pairing = parseDevicePairing(await readFile(selected.filePaths[0], 'utf8'));
     await tv.close();
-    await connect({ url: pairing.url, token: pairing.token, mode });
+    await connect({ ...pairing, mode });
     await finishSetup();
     return true;
   });
@@ -655,7 +658,11 @@ app.whenReady().then(async () => {
       .parse(await request('POST', '/v1/devices', device.parse(input)));
     if (generation !== connectionGeneration)
       throw new Error('Connection changed; verify device assignment in its original branch');
-    pairing = { ...result, url: connectionInfo().url! };
+    pairing = {
+      ...result,
+      url: connectionInfo().url!,
+      ...(connectionTrust() ? { trust: connectionTrust() } : {}),
+    };
     return result;
   });
   handle('queue:save-pairing', async () => {

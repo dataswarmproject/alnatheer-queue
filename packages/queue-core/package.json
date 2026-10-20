@@ -1,6 +1,6 @@
 {
   "name": "@saraf/queue-core",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,9 +23,13 @@
     "./device": "./src/device.ts",
     "./server": "./src/server.ts",
     "./headquarters": "./src/headquarters.ts",
-    "./speech": "./src/speech.ts"
+    "./speech": "./src/speech.ts",
+    "./branch-tls": "./src/branch-tls.ts",
+    "./branch-trust": "./src/branch-trust.ts"
   },
   "dependencies": {
+    "@peculiar/x509": "1.12.4",
+    "reflect-metadata": "0.2.2",
     "zod": "3.25.76"
   },
   "devDependencies": {

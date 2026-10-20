@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { branchTrustSchema, validateBranchTrust } from '@saraf/queue-core/branch-tls';
 
 export function parseDevicePairing(text: string) {
   if (Buffer.byteLength(text, 'utf8') > 16384)
@@ -25,12 +26,14 @@ export function parseDevicePairing(text: string) {
         .string()
         .trim()
         .regex(/^[a-f0-9]{64}$/),
+      trust: branchTrustSchema.optional(),
     })
     .safeParse(value);
   if (!result.success)
     throw new Error(
       'ملف الاقتران لا يحتوي عنوان الخادم ومفتاح جهاز صالحًا من 64 خانة. أعد تصديره من «إنشاء وربط الأجهزة».',
     );
+  if (result.data.trust) validateBranchTrust(result.data.trust);
   return result.data;
 }
 

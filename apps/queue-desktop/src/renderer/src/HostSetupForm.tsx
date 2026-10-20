@@ -1,4 +1,5 @@
 import { Select } from './Select';
+import { NetworkCertificate } from './NetworkCertificate';
 import { useEffect, useState } from 'react';
 import { hostSetupRequestSchema, type HostSetupInfo } from '../../setup-contract';
 
@@ -17,6 +18,8 @@ export function HostSetupForm({
   const [url, setUrl] = useState(''),
     [cert, setCert] = useState(''),
     [key, setKey] = useState('');
+  const [tlsMode, setTlsMode] = useState<'automatic' | 'manual'>('automatic');
+  const endpoint = tlsMode === 'automatic' ? `https://${host}:${port}` : url;
   const [syncUrl, setSyncUrl] = useState(''),
     [syncKey, setSyncKey] = useState(''),
     [openAtLogin, setOpenAtLogin] = useState(false);
@@ -87,8 +90,10 @@ export function HostSetupForm({
                 directory,
                 port,
                 host,
-                url: host === '127.0.0.1' ? `http://127.0.0.1:${port}` : url,
-                ...(host !== '127.0.0.1' ? { cert, key } : {}),
+                url: host === '127.0.0.1' ? `http://127.0.0.1:${port}` : endpoint,
+                ...(host !== '127.0.0.1'
+                  ? { tlsMode, ...(tlsMode === 'manual' ? { cert, key } : {}) }
+                  : {}),
                 ...(syncUrl ? { syncUrl, syncKey } : {}),
                 openAtLogin,
               });
@@ -184,7 +189,8 @@ export function HostSetupForm({
                   عنوان الخادم HTTPS
                   <input
                     type="url"
-                    value={url}
+                    value={endpoint}
+                    readOnly={tlsMode === 'automatic'}
                     disabled={busy}
                     onChange={e => setUrl(e.target.value)}
                     required
@@ -192,48 +198,18 @@ export function HostSetupForm({
                     placeholder={`https://branch-server:${port}`}
                   />
                 </label>
-                <label>
-                  شهادة TLS
-                  <span className="path-picker">
-                    <input
-                      value={cert}
-                      readOnly
-                      dir="ltr"
-                      placeholder="اختر ملف الشهادة (.pem أو .crt)"
-                    />
-                    <button
-                      type="button"
-                      aria-label="اختيار شهادة TLS"
-                      disabled={busy}
-                      onClick={() => void pick('cert')}
-                    >
-                      تصفح…
-                    </button>
-                  </span>
-                </label>
-                <label>
-                  المفتاح الخاص للشهادة
-                  <span className="path-picker">
-                    <input
-                      value={key}
-                      readOnly
-                      dir="ltr"
-                      placeholder="اختر ملف المفتاح الخاص (.pem أو .key)"
-                    />
-                    <button
-                      type="button"
-                      aria-label="اختيار المفتاح الخاص للشهادة"
-                      disabled={busy}
-                      onClick={() => void pick('key')}
-                    >
-                      تصفح…
-                    </button>
-                  </span>
-                </label>
+                <NetworkCertificate
+                  mode={tlsMode}
+                  onMode={setTlsMode}
+                  cert={cert}
+                  keyFile={key}
+                  pick={kind => void pick(kind)}
+                  busy={busy}
+                />
                 <p>
                   اختر عنوانًا ثابتًا يمكن لأجهزة الفرع الوصول إليه عبر LAN أو VPN. يجب أن تطابق
-                  شهادة TLS اسم الخادم وأن تثق بها الأجهزة. يضبط مسؤول التقنية المسار وDNS وفتح
-                  المنفذ للشبكة المصرّح بها فقط.
+                  شهادة الشركة اسم الخادم عند اختيار الإعداد اليدوي. يضبط مسؤول التقنية المسار وDNS
+                  وفتح المنفذ للشبكة المصرّح بها فقط.
                 </p>
               </>
             )}
