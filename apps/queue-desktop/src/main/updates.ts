@@ -14,6 +14,7 @@ import { SignedReleaseEngine } from '../signed-release-engine';
 import { queueReleasePublicKey } from '@saraf/queue-core/release-trust';
 import { ownsConnectedHost, ownedHostProcess, startSavedHost } from './host-setup';
 import { waitForHostExit } from '../process-exit';
+import { isLegacyRuntime } from '@saraf/queue-core/legacy-runtime';
 
 const preferencesSchema = z
   .object({
@@ -93,7 +94,13 @@ export async function createUpdates(closeTv: () => Promise<void>) {
     : { feedUrl: '', publisher: '' };
   let engine: SignedInstallerEngine | SignedReleaseEngine | null = null;
   let updater: NsisUpdater | null = null;
-  if (app.isPackaged && process.platform === 'win32' && policy.feedUrl && policy.publisher) {
+  if (
+    !isLegacyRuntime() &&
+    app.isPackaged &&
+    process.platform === 'win32' &&
+    policy.feedUrl &&
+    policy.publisher
+  ) {
     const url = new URL(policy.feedUrl);
     if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash)
       throw new Error('Invalid packaged update policy');
@@ -105,7 +112,7 @@ export async function createUpdates(closeTv: () => Promise<void>) {
     updater.logger = null;
     engine = new SignedInstallerEngine(updater, policy.publisher);
   }
-  if (!engine && app.isPackaged && process.platform === 'win32') {
+  if (!isLegacyRuntime() && !engine && app.isPackaged && process.platform === 'win32') {
     engine = new SignedReleaseEngine({
       publicKey: queueReleasePublicKey,
       latest: () => request('GET', '/v1/update-release'),

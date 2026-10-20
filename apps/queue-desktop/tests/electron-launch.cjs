@@ -9,10 +9,26 @@ module.exports = {
       // Tests run several branch PCs on one desktop with fullscreen displays.
       const app = await _electron.launch({
         ...options,
+        ...(process.env.QUEUE_TEST_ELECTRON
+          ? { executablePath: process.env.QUEUE_TEST_ELECTRON }
+          : {}),
         args: [
+          ...(process.env.QUEUE_TEST_ELECTRON
+            ? [
+                '-r',
+                path.resolve(
+                  __dirname,
+                  '../release/legacy-test-tools/node_modules/playwright-core/lib/server/electron/loader.js',
+                ),
+              ]
+            : []),
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
-          ...(options.args ?? []),
+          ...(options.args ?? []).map(arg =>
+            process.env.QUEUE_TEST_MAIN && path.resolve(arg) === path.resolve(__dirname, '..')
+              ? process.env.QUEUE_TEST_MAIN
+              : arg,
+          ),
         ],
       });
       try {

@@ -67,7 +67,7 @@ async function shutdown() {
   if (stopping) return;
   stopping = true;
   const drained = new Promise<void>(resolve => server.close(() => resolve()));
-  server.closeIdleConnections();
+  server.closeIdleConnections?.();
   await operations.stop();
   await drained;
   await store.close();

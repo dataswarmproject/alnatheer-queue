@@ -1,3 +1,4 @@
+import './legacy-bootstrap';
 import {
   app,
   BrowserWindow,
@@ -64,6 +65,8 @@ import { createUpdates } from './updates';
 import { updateActionSchema } from '../update-contract';
 import { saveTvLayout, restoreTvLayout } from './tv-layout';
 import { useWindowsNetworkTrust } from '@saraf/queue-core/network-trust';
+import { parseDevicePairing } from '../pairing-input';
+import { hostNetworkInfo, enableHostNetwork } from './host-network';
 
 useWindowsNetworkTrust();
 protocol.registerSchemesAsPrivileged([
@@ -339,13 +342,29 @@ app.whenReady().then(async () => {
   }
   Menu.setApplicationMenu(null);
   app.setAppUserModelId('com.alnatheer.queue');
-  protocol.handle('queue', async req => {
-    const url = new URL(req.url);
+  const resolveRenderer = (address: string) => {
+    const url = new URL(address);
     const file = path.resolve(rendererRoot, '.' + decodeURIComponent(url.pathname));
     if (url.hostname !== 'app' || !file.startsWith(rendererRoot + path.sep))
-      return new Response('Forbidden', { status: 403 });
-    return net.fetch(pathToFileURL(file).href);
-  });
+      throw new Error('Forbidden renderer path');
+    return file;
+  };
+  if (typeof protocol.handle !== 'function') {
+    protocol.registerFileProtocol('queue', (req, respond) => {
+      try {
+        respond({ path: resolveRenderer(req.url) });
+      } catch {
+        respond({ error: -10 });
+      }
+    });
+  } else
+    protocol.handle('queue', async req => {
+      const url = new URL(req.url);
+      const file = path.resolve(rendererRoot, '.' + decodeURIComponent(url.pathname));
+      if (url.hostname !== 'app' || !file.startsWith(rendererRoot + path.sep))
+        return new Response('Forbidden', { status: 403 });
+      return net.fetch(pathToFileURL(file).href);
+    });
   await loadConnection();
   // The independently running branch process survives closure of the manager UI.
   await startSavedHost().catch(() => {});
@@ -395,10 +414,7 @@ app.whenReady().then(async () => {
     });
     if (selected.canceled) return false;
     if ((await stat(selected.filePaths[0])).size > 16384) throw new Error('Pairing file too large');
-    const pairing = z
-      .object({ url: z.string().max(200), token: z.string().regex(/^[a-f0-9]{64}$/) })
-      .passthrough()
-      .parse(JSON.parse(await readFile(selected.filePaths[0], 'utf8')));
+    const pairing = parseDevicePairing(await readFile(selected.filePaths[0], 'utf8'));
     await tv.close();
     await connect({ url: pairing.url, token: pairing.token, mode });
     await finishSetup();
@@ -411,7 +427,12 @@ app.whenReady().then(async () => {
   handle('queue:setup-path', async input => {
     requireOperator();
     const kind = z.enum(['directory', 'cert', 'key']).parse(input);
-    if (connectionInfo().configured) throw new Error('Disconnect before setting up the server');
+    if (connectionInfo().configured) {
+      const network = await hostNetworkInfo();
+      if (kind === 'directory' || connectionInfo().role !== 'manager' || !network.available)
+        throw new Error('Disconnect before setting up the server');
+      await requireManager();
+    }
     const selected = await dialog.showOpenDialog(window, {
       title: kind === 'directory' ? 'اختر مجلدًا فارغًا لبيانات الفرع' : 'اختر ملف شهادة الشبكة',
       properties: kind === 'directory' ? ['openDirectory', 'createDirectory'] : ['openFile'],
@@ -430,6 +451,20 @@ app.whenReady().then(async () => {
     requireOperator();
     await resumeHost();
     await finishSetup();
+  });
+  handle('queue:host-network-info', async () => {
+    await requireManager();
+    return hostNetworkInfo();
+  });
+  handle('queue:enable-host-network', async input => {
+    await requireManager();
+    const result = await enableHostNetwork(input, async () => {
+      await tv.close();
+      await saveTvLayout(null);
+      audio.clear();
+    });
+    resetConnectionContext();
+    return result;
   });
   const requireManager = async () => {
     const snapshot = snapshotSchema.parse(await request('GET', '/v1/snapshot'));

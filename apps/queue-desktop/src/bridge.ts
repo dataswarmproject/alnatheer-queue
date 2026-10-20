@@ -13,7 +13,14 @@ import type { ServerStatus } from '@saraf/queue-core/server';
 import type { SpeechRequest, SpeechAudio } from '@saraf/queue-core/speech';
 import type { z } from 'zod';
 import type { backupSummarySchema } from '@saraf/queue-core/server';
-import type { DeviceMode, HostSetupRequest, HostSetupInfo, TvStatus } from './setup-contract';
+import type {
+  DeviceMode,
+  HostSetupRequest,
+  HostSetupInfo,
+  TvStatus,
+  HostNetwork,
+  HostNetworkInfo,
+} from './setup-contract';
 import type { AudioSettings, AudioRuntime, AudioStatus } from './audio-contract';
 import type {
   OperationsSettings,
@@ -45,6 +52,8 @@ export interface QueueBridge {
   createHost(input: HostSetupRequest): Promise<void>;
   branchIdentity(action: 'copy' | 'export'): Promise<boolean>;
   resumeHost(): Promise<void>;
+  hostNetworkInfo(): Promise<HostNetworkInfo>;
+  enableHostNetwork(input: HostNetwork): Promise<{ url: string; backup: string }>;
   tvStatus(): Promise<TvStatus>;
   openTv(displayId: number): Promise<void>;
   closeTv(): Promise<void>;

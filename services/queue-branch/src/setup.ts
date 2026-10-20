@@ -21,7 +21,7 @@ let store: QueueStore | undefined,
 try {
   store = await QueueStore.open(values.directory, branchId);
   const actor = await store.provision(
-    roleSchema.parse(values.role),
+    roleSchema.parse(values.role ?? 'manager'),
     values.counter ? id.parse(values.counter) : null,
   );
   await output.writeFile(

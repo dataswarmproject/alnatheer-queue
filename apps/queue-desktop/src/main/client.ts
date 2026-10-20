@@ -6,6 +6,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { trustedEndpoint, snapshotSchema, roleSchema } from '@saraf/queue-core';
 import { assertDeviceMode, deviceModeSchema } from '../setup-contract';
+import { connectionFailure } from '../pairing-input';
 
 const connectionSchema = z
   .object({
@@ -55,7 +56,7 @@ export async function connect(input: unknown) {
     });
   } catch (error) {
     credentials = old;
-    throw error;
+    throw connectionFailure(error, url.href);
   }
 }
 export async function disconnect() {

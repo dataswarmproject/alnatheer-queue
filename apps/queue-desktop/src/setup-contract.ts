@@ -62,6 +62,22 @@ export const hostSetupRequestSchema = hostSetupFields
   .superRefine(validateEvaluation);
 export type HostSetupRequest = z.infer<typeof hostSetupRequestSchema>;
 export type HostSetup = z.infer<typeof hostSetupSchema>;
+export const hostNetworkSchema = z
+  .object({
+    host: z.string().min(1).max(200),
+    url: z.string().url().max(200),
+    port: z.number().int().min(1024).max(65535),
+    cert: z.string().min(1).max(500),
+    key: z.string().min(1).max(500),
+  })
+  .strict();
+export type HostNetwork = z.infer<typeof hostNetworkSchema>;
+export type HostNetworkInfo = {
+  available: boolean;
+  url: string;
+  addresses: string[];
+  port: number;
+};
 export type HostSetupInfo = {
   directory: string;
   configured: boolean;

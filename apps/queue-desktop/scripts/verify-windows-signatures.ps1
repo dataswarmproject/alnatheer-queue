@@ -8,10 +8,11 @@ param(
 $ErrorActionPreference = 'Stop'
 # A PowerShell 7 parent can pass its module paths to Windows PowerShell.
 # Load the security module belonging to this verifier's actual host.
-Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1') -ErrorAction Stop
+$securityModule = Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1'
+if (Test-Path -LiteralPath $securityModule) { Import-Module $securityModule -ErrorAction Stop }
 foreach ($file in $Files) {
   $resolved = (Resolve-Path -LiteralPath $file).Path
-  $signature = Get-AuthenticodeSignature -LiteralPath $resolved
+  $signature = Get-AuthenticodeSignature -FilePath $resolved
   $cert = $signature.SignerCertificate
   if (!$cert -or $cert.Thumbprint -ine $Thumbprint -or $cert.GetNameInfo('SimpleName',$false) -cne $Publisher) {
     throw "Expected publisher signature missing: $resolved"
@@ -19,5 +20,5 @@ foreach ($file in $Files) {
   if ($Mode -eq 'public' -and $cert.Subject -ceq $cert.Issuer) { throw 'Self-signed certificate cannot satisfy public release signing' }
   if (!$signature.TimeStamperCertificate) { throw "Timestamp missing: $resolved" }
   if ($signature.Status -ne 'Valid') { throw "Windows trust validation failed: $($signature.Status). Deploy the pinned public certificate on the signing machine for internal builds." }
-  [pscustomobject]@{file=$resolved; publisher=$Publisher; thumbprint=$cert.Thumbprint; windowsStatus=$signature.Status.ToString(); timestamped=$true; trustMode=$Mode} | ConvertTo-Json -Compress
+  Write-Output ("Valid timestamped signature: {0}; publisher={1}; thumbprint={2}; trust={3}" -f $resolved,$Publisher,$cert.Thumbprint,$Mode)
 }

@@ -156,13 +156,13 @@ export function Connect({
                     title="الصق مفتاح الجهاز كاملًا: 64 حرفًا ورقمًا، أو استورد ملف الاقتران."
                     value={key}
                     disabled={busy}
-                    onChange={e => setKey(e.target.value)}
+                    onChange={e => setKey(e.target.value.trim())}
                     dir="ltr"
                     required
                     type="password"
                     autoComplete="off"
                     minLength={64}
-                    maxLength={64}
+                    maxLength={256}
                   />
                   <small id="device-key-help">
                     استيراد ملف الاقتران يملأ العنوان والمفتاح تلقائيًا.

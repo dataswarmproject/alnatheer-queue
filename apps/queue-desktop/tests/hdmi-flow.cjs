@@ -278,21 +278,26 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
         return original(url, options);
       };
     });
-    const lateOpen = page.evaluate(async id => {
-      try {
-        await window.queue.openTv(id);
-        return false;
-      } catch {
-        return true;
-      }
-    }, displayId);
+    const lateOpen = page
+      .evaluate(async id => {
+        try {
+          await window.queue.openTv(id);
+          return false;
+        } catch {
+          return true;
+        }
+      }, displayId)
+      .then(
+        value => ({ value }),
+        error => ({ error: error.message }),
+      );
     await expect.poll(() => app.evaluate(({ app }) => app.queueProvisionPaused)).toBe(true);
     await page.evaluate(() => window.queue.closeTv());
     await app.evaluate(({ app }) => {
       global.fetch = app.queueOriginalFetch;
       app.queueResumeProvision();
     });
-    expect(await lateOpen).toBe(true);
+    expect(await lateOpen).toEqual({ value: true });
     expect((await page.evaluate(() => window.queue.tvStatus())).open).toBe(false);
     // Manager exports a file; another role imports it without typing the key.
     await page.evaluate(() =>

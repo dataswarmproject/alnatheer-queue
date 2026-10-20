@@ -11,12 +11,14 @@ import { snapshotSchema, trustedEndpoint } from '@saraf/queue-core';
 import { hostSetupSchema, hostSetupRequestSchema, type HostSetup } from '../setup-contract';
 import { connect, connectionInfo, send } from './client';
 import { installLocalVoice, localVoiceAvailable } from './local-voice-library';
+import { isLegacyRuntime } from '@saraf/queue-core/legacy-runtime';
 
 const exec = promisify(execFile);
 const storedSchema = z
   .object({ settings: hostSetupSchema, token: z.string().regex(/^[a-f0-9]{64}$/) })
   .strict();
-const configFile = () => path.join(app.getPath('userData'), 'branch-host.enc');
+export const hostConfigFile = () => path.join(app.getPath('userData'), 'branch-host.enc');
+const configFile = hostConfigFile;
 const defaultDirectory = () => path.join(app.getPath('userData'), 'branch-server');
 const chosen = new Map<string, Set<string>>();
 let creating = false;
@@ -35,10 +37,14 @@ export function localAddresses() {
     ),
   ];
 }
-async function readConfig() {
+export async function readHostConfig() {
   if (!safeStorage.isEncryptionAvailable())
     throw new Error('OS credential encryption is unavailable');
   return storedSchema.parse(JSON.parse(safeStorage.decryptString(await readFile(configFile()))));
+}
+const readConfig = readHostConfig;
+export function approvedSetupPath(kind: string, value: string) {
+  return chosen.get(kind)?.has(path.resolve(value)) === true;
 }
 export async function hostSetupInfo() {
   let configured = false;
@@ -57,7 +63,17 @@ export async function hostSetupInfo() {
 function runtime() {
   return app.isPackaged
     ? path.join(process.resourcesPath, 'branch')
-    : path.resolve(__dirname, '../../../../services/queue-branch/dist');
+    : path.resolve(
+        __dirname,
+        '../../../../services/queue-branch',
+        isLegacyRuntime() ? 'dist-win7' : 'dist',
+      );
+}
+function runtimeArgs(entry: string) {
+  return [
+    ...(isLegacyRuntime() ? ['--require', path.join(runtime(), 'legacy-bootstrap.cjs')] : []),
+    path.join(runtime(), entry),
+  ];
 }
 async function ready(settings: HostSetup, token: string) {
   try {
@@ -69,7 +85,7 @@ async function ready(settings: HostSetup, token: string) {
     return false;
   }
 }
-async function start(settings: HostSetup, token: string) {
+export async function startHost(settings: HostSetup, token: string) {
   const freeVoiceRequested = await localVoiceAvailable();
   try {
     await installLocalVoice(settings.directory);
@@ -97,7 +113,7 @@ async function start(settings: HostSetup, token: string) {
     QUEUE_SPEECH_API_KEY: freeVoiceRequested ? '' : (settings.speechApiKey ?? ''),
     QUEUE_SPEECH_CACHE_DIR: path.join(settings.directory, 'speech-cache'),
   });
-  const child = spawn(process.execPath, [path.join(runtime(), 'main.js')], {
+  const child = spawn(process.execPath, runtimeArgs('main.js'), {
     env,
     cwd: settings.directory,
     detached: true,
@@ -117,6 +133,7 @@ async function start(settings: HostSetup, token: string) {
   // Preserve the database/configuration for recovery; never reset or delete them.
   throw new Error('تعذر بدء خادم الفرع. تحقق من المنفذ وشهادة الشبكة ثم استأنف الإعداد.');
 }
+const start = startHost;
 function startup(enabled: boolean) {
   if (!app.isPackaged || process.platform !== 'win32') {
     if (enabled) throw new Error('Automatic startup requires the installed Windows application');
@@ -253,7 +270,7 @@ export async function createHost(input: unknown) {
     await exec(
       process.execPath,
       [
-        path.join(runtime(), 'setup.js'),
+        ...runtimeArgs('setup.js'),
         '--directory',
         path.join(directory, 'data'),
         '--branch',

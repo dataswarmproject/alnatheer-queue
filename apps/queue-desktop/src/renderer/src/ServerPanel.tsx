@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ServerStatus } from '@saraf/queue-core/server';
 import type { DesktopSpeechStatus } from '../../speech-policy';
 import { OperationsPanel } from './OperationsPanel';
+import { HostNetworkSettings } from './HostNetworkSettings';
 export function ServerPanel() {
   const [status, setStatus] = useState<ServerStatus | null>(null),
     [error, setError] = useState(''),
@@ -150,6 +151,7 @@ export function ServerPanel() {
         <p role="status">جارٍ قراءة حالة الخادم…</p>
       )}
       {message && <p role="status">{message}</p>}
+      <HostNetworkSettings onChanged={refresh} />
       <OperationsPanel refreshServer={refresh} />
       {error && (
         <p className="error" role="alert">

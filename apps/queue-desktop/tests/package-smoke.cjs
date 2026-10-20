@@ -11,10 +11,14 @@ const appRoot = path.resolve(__dirname, '..');
   const data = path.join(directory, 'data'),
     pairing = path.join(directory, 'manager.queue-pairing.json'),
     branchId = crypto.randomUUID();
-  const root = path.join(appRoot, 'release/win-unpacked'),
+  const root = process.env.QUEUE_PACKAGE_DIRECTORY || path.join(appRoot, 'release/win-unpacked'),
     exe = path.join(root, 'Alnatheer Queue.exe'),
     resources = path.join(root, 'resources/branch');
   const env = { ...process.env, ELECTRON_RUN_AS_NODE: '1' };
+  const bootstrap =
+    process.env.QUEUE_PACKAGE_LEGACY === '1'
+      ? ['--require', path.join(resources, 'legacy-bootstrap.cjs')]
+      : [];
   let host;
   try {
     const voiceRoot = path.join(resources, 'voice-library-free');
@@ -32,6 +36,7 @@ const appRoot = path.resolve(__dirname, '..');
     await promisify(execFile)(
       exe,
       [
+        ...bootstrap,
         path.join(resources, 'setup.js'),
         '--directory',
         data,
@@ -47,7 +52,7 @@ const appRoot = path.resolve(__dirname, '..');
     await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
     const port = reservation.address().port;
     await new Promise(resolve => reservation.close(resolve));
-    host = spawn(exe, [path.join(resources, 'main.js')], {
+    host = spawn(exe, [...bootstrap, path.join(resources, 'main.js')], {
       env: {
         ...env,
         QUEUE_BRANCH_ID: branchId,
@@ -119,6 +124,7 @@ const appRoot = path.resolve(__dirname, '..');
     await promisify(execFile)(
       exe,
       [
+        ...bootstrap,
         path.join(resources, 'restore.js'),
         '--archive',
         path.join(directory, 'backups', backup.filename),

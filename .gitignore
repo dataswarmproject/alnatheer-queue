@@ -5,8 +5,10 @@ node_modules/
 # Build outputs
 .next/
 dist/
+dist-win7/
 build/
 out/
+out-win7/
 *.tsbuildinfo
 apps/web/typescript-errors.txt
 
@@ -82,6 +84,7 @@ queue-dependencies.local.json
 **/operations.json
 # Locally exported report proofs are data, not application source.
 /apps/queue-desktop/queue-performance-*.json
+/queue-performance-*.json
 # Signing private keys and local identity records must stay outside Git.
 *.pfx
 *.p12

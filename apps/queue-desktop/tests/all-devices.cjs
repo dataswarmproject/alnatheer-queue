@@ -88,8 +88,23 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
           })
           .click();
       }
+      if (role === 'teller') {
+        const identity = path.join(directory, 'branch-reference.json');
+        await fs.writeFile(
+          identity,
+          JSON.stringify({ kind: 'saraf-branch-identity', branchId: crypto.randomUUID() }),
+        );
+        await app.evaluate(({ dialog }, file) => {
+          dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+        }, identity);
+        await page.getByRole('button', { name: 'استيراد ملف الاقتران', exact: true }).click();
+        await expect(page.getByRole('alert')).toContainText('هذا ملف معرّف الفرع');
+      }
       await page.getByLabel('عنوان خدمة الفرع').fill(fixture.url);
-      await page.getByLabel('مفتاح الجهاز', { exact: true }).fill(fixture[role].token);
+      await page.getByLabel('مفتاح الجهاز', { exact: true }).fill(' ' + fixture[role].token + ' ');
+      await expect(page.getByLabel('مفتاح الجهاز', { exact: true })).toHaveValue(
+        fixture[role].token,
+      );
       const replacement = ['kiosk', 'display', 'teller'].includes(fixture[role].role)
         ? app.waitForEvent('window')
         : null;

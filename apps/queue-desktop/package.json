@@ -1,7 +1,7 @@
 {
   "name": "@saraf/queue-desktop",
   "productName": "Alnatheer Queue",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Alnatheer branch queue desktop and teller dock",
   "author": "Alnatheer",
   "private": true,
@@ -24,7 +24,11 @@
     "preview:dock": "electron-vite build && node scripts/preview-dock.cjs",
     "test:package": "node tests/package-smoke.cjs",
     "preview:manager": "pnpm build && node scripts/preview-manager.cjs",
-    "release:sign": "node scripts/sign-release.cjs"
+    "release:sign": "node scripts/sign-release.cjs",
+    "build:win7": "node scripts/build-windows7.cjs",
+    "package:win7": "node scripts/build-windows7.cjs --package",
+    "test:win7:prepare": "node scripts/prepare-windows7-test.cjs",
+    "test:win7": "node scripts/test-windows7.cjs"
   },
   "dependencies": {
     "@saraf/queue-core": "workspace:*",

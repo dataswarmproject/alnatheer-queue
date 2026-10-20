@@ -155,7 +155,7 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
               <tbody>
                 {report.tellers.map(t => (
                   <tr key={t.actorId}>
-                    <th>
+                    <th scope="row">
                       {t.name}
                       <small>
                         {t.counter ?? '—'} · {t.staffRef ?? 'إسناد غير مكتمل'}
@@ -190,7 +190,7 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
               <tbody>
                 {report.counters.map(c => (
                   <tr key={c.id}>
-                    <th>
+                    <th scope="row">
                       {c.name}
                       {c.archived && <small>محذوف من الخدمة · التاريخ محفوظ</small>}
                       {!c.coverageKnown && <small>تغطية الفترة غير كاملة</small>}
@@ -219,7 +219,7 @@ export function Performance({ initialCounterId = '' }: { initialCounterId?: stri
               <tbody>
                 {report.services.map(s => (
                   <tr key={s.id}>
-                    <th>{s.name}</th>
+                    <th scope="row">{s.name}</th>
                     <td>{s.starts}</td>
                     <td>{s.completed}</td>
                     <td>{s.transfers}</td>

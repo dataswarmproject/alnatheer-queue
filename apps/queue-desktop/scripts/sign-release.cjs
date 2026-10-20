@@ -5,12 +5,16 @@ const fs = require('node:fs'),
 (async () => {
   const root = path.resolve(__dirname, '..'),
     version = require('../package.json').version;
+  const legacy = process.argv.includes('--windows7');
+  const directory = path.join(root, legacy ? 'release/windows7' : 'release');
+  const fileName = `alnatheer-queue-${version}-${legacy ? 'windows7-x64' : 'windows-x64'}.exe`;
+  const installer = path.join(
+    directory,
+    legacy ? fileName : `Alnatheer Queue Setup ${version}.exe`,
+  );
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Stable version required');
   require('./verify-windows-signatures.cjs').verifyWindowsSignatures(
-    [
-      path.join(root, 'release/win-unpacked/Alnatheer Queue.exe'),
-      path.join(root, `release/Alnatheer Queue Setup ${version}.exe`),
-    ],
+    [path.join(directory, 'win-unpacked/Alnatheer Queue.exe'), installer],
     process.env.QUEUE_REQUIRE_WINDOWS_SIGNATURE === '1',
   );
   const key = crypto.createPrivateKey(
@@ -31,16 +35,14 @@ const fs = require('node:fs'),
       publicKey
   )
     throw new Error('Release signer does not match the client trust root');
-  const fileName = `alnatheer-queue-${version}-windows-x64.exe`,
-    directory = path.join(root, 'release'),
-    file = path.join(directory, fileName);
-  await fsp.copyFile(path.join(directory, `Alnatheer Queue Setup ${version}.exe`), file);
+  const file = path.join(directory, fileName);
+  if (!legacy) await fsp.copyFile(installer, file);
   const hash = crypto.createHash('sha256');
   for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
   const payload = {
     format: 1,
     version,
-    platform: 'windows-x64',
+    platform: legacy ? 'windows7-x64' : 'windows-x64',
     fileName,
     size: (await fsp.stat(file)).size,
     sha256: hash.digest('hex'),
@@ -50,7 +52,10 @@ const fs = require('node:fs'),
     payload,
     signature: crypto.sign(null, Buffer.from(JSON.stringify(payload)), key).toString('base64'),
   };
-  await fsp.writeFile(path.join(directory, 'queue-release.json'), JSON.stringify(release, null, 2));
+  await fsp.writeFile(
+    path.join(directory, legacy ? 'queue-release-windows7-x64.json' : 'queue-release.json'),
+    JSON.stringify(release, null, 2),
+  );
   console.log('Signed private queue release prepared: ' + version);
 })().catch(error => {
   console.error(error.message);

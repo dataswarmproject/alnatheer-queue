@@ -77,9 +77,14 @@ const { createServer } = require('node:net');
     await fs.mkdir(path.join(root, 'test-results'), { recursive: true });
     await page.screenshot({ path: path.join(root, 'test-results/branch-auto-setup.png') });
     await page.getByRole('button', { name: 'إنشاء خادم الفرع', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'الإعدادات', exact: true })).toBeVisible({
-      timeout: 60000,
-    });
+    try {
+      await expect(page.getByRole('button', { name: 'الإعدادات', exact: true })).toBeVisible({
+        timeout: 60000,
+      });
+    } catch (error) {
+      console.error('Setup alert:', await page.getByRole('alert').allTextContents());
+      throw error;
+    }
     const snapshot = await page.evaluate(() => window.queue.snapshot());
     expect(snapshot.branchId).toMatch(
       /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/,
@@ -232,7 +237,7 @@ const { createServer } = require('node:net');
       path.dirname(directory) === path.resolve(os.tmpdir()) &&
       path.basename(directory).startsWith('saraf-queue-setup-test-')
     )
-      await fs.rm(directory, { recursive: true, force: true });
+      await fs.rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }
 })().catch(error => {
   console.error(error.message);

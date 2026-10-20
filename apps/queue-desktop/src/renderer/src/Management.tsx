@@ -27,10 +27,12 @@ export function Management({
     [key, setKey] = useState('');
   const [devices, setDevices] = useState<Awaited<ReturnType<typeof window.queue.devices>>>([]);
   const [firstCounterName, setFirstCounterName] = useState('');
+  const [branchUrl, setBranchUrl] = useState('');
   const [firstCounterId] = useState(() => crypto.randomUUID());
   const load = async () => {
     try {
       setDevices(await window.queue.devices());
+      setBranchUrl((await window.queue.connection()).url ?? '');
     } catch (e) {
       setError(String((e as Error).message));
     }
@@ -193,6 +195,18 @@ export function Management({
         </div>
       </Form>
       <h2>إنشاء وربط الأجهزة</h2>
+      {branchUrl && (
+        <label>
+          عنوان اتصال الفرع الحالي
+          <input aria-label="عنوان اتصال الفرع الحالي" value={branchUrl} readOnly dir="ltr" />
+          {['localhost', '127.0.0.1', '[::1]'].includes(new URL(branchUrl).hostname) && (
+            <small role="note">
+              العنوان الحالي لهذا الكمبيوتر فقط. لربط أجهزة الموظفين والكشك الأخرى، جهّز وصول HTTPS
+              إلى خادم الفرع عبر LAN/VPN قبل توزيع ملفات الاقتران.
+            </small>
+          )}
+        </label>
+      )}
       <p>
         ثبّت التطبيق نفسه على جهاز الموظف أو الكشك أو الشاشة، ثم اختر الدور واستورد ملف الاقتران.
         الكشك يضبط طابعته من إعدادات الجهاز. شاشة العرض المتصلة بكمبيوتر المدير عبر HDMI يُدار من

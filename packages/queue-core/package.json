@@ -1,12 +1,13 @@
 {
   "name": "@saraf/queue-core",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "exports": {
+    "./legacy-runtime": "./src/legacy-runtime.ts",
     "./network-trust": "./src/network-trust.ts",
     "./update-release": "./src/update-release.ts",
     "./github-release-broker": "./src/github-release-broker.ts",

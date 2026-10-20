@@ -18,6 +18,10 @@ if (feed && !signed)
 if (feed && publisher !== signing.publisher)
   throw new Error('Signing and update publisher identities differ');
 fs.writeFileSync(
-  path.join(root, 'out/main/update-policy.json'),
+  path.join(
+    root,
+    process.env.QUEUE_BUILD_TARGET === 'windows7' ? 'out-win7' : 'out',
+    'main/update-policy.json',
+  ),
   JSON.stringify({ feedUrl: signed ? feed : '', publisher: signed ? publisher : '' }),
 );

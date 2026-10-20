@@ -140,6 +140,13 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       if (format === 'csv') expect(data.toString()).toContain('Record type');
       if (format === 'json') expect(JSON.parse(data).timezone).toBe('Asia/Riyadh');
     }
+    // PDF export uses a separate native print window. Restore the manager's
+    // compositor before capturing it, including on the Chromium 108 test runtime.
+    await app.evaluate(({ BrowserWindow }) => {
+      const manager = BrowserWindow.getAllWindows().find(w => w.isVisible());
+      manager?.show();
+      manager?.focus();
+    });
     await page.screenshot({
       path: path.join(root, 'test-results/manager-performance-reports.png'),
     });
